@@ -1,0 +1,98 @@
+/* 语言切换器样式 */
+.language-switcher {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+/* 国旗按钮样式 */
+.language-flag {
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1.5rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px; /* 国旗和文字之间的间距 */
+  min-width: 40px;
+  min-height: 40px;
+  color: #000000; /* 默认文字颜色为黑色 */
+}
+
+/* 国旗按钮悬停效果 */
+.language-flag:hover {
+  background: #f5f5f5; /* 极客风格浅灰悬停 */
+  border-color: #000000; /* 黑色边框 */
+}
+
+/* 当前激活的语言按钮 */
+.language-flag.active {
+  background: #000000; /* 极客风格黑色激活状态 */
+  border-color: #000000;
+  color: #ffffff; /* 选中状态下文字颜色为白色 */
+}
+
+/* 国旗表情符号 */
+.flag-emoji {
+  display: block;
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+/* 语言缩写文字样式 */
+.language-code {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: inherit; /* 继承父元素的颜色 */
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .language-switcher {
+    gap: 6px;
+  }
+
+  .language-flag {
+    padding: 5px 8px;
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  .flag-emoji {
+    font-size: 1.4rem;
+  }
+
+  .language-code {
+    font-size: 0.7rem;
+  }
+}
+
+/* 超小屏幕优化 */
+@media (max-width: 480px) {
+  .language-switcher {
+    gap: 4px;
+  }
+
+  .language-flag {
+    padding: 4px 6px;
+    min-width: 32px;
+    min-height: 32px;
+  }
+
+  .flag-emoji {
+    font-size: 1.2rem;
+  }
+
+  .language-code {
+    font-size: 0.65rem;
+  }
+}
+

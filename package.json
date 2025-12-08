@@ -1,0 +1,22 @@
+{
+  "name": "pngcut",
+  "version": "1.0.0",
+  "description": "PNG图片切分工具 - 将带Alpha通道的PNG图片切分成多个矩形图片",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.43",
+    "@types/react-dom": "^18.2.17",
+    "@vitejs/plugin-react": "^4.2.1",
+    "vite": "^5.0.8"
+  }
+}
+
