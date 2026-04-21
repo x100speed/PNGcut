@@ -89,32 +89,318 @@
   border: 1px solid #fcc;
 }
 
-/* 预览区域样式 */
-.preview-section {
-  margin-bottom: 40px;
-}
-
-.preview-section h2 {
-  color: #333;
-  margin-bottom: 15px;
-  font-size: 1.5rem;
-}
-
-.image-container {
-  background: #fafafa;
-  border-radius: 4px; /* 更小的圆角 */
+/* 抠图与预览（与 video-timesheet-web 参考帧抠像能力对齐） */
+.chroma-section {
+  margin-bottom: 32px;
   padding: 20px;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  background: #fafafa;
+}
+
+.chroma-section__title {
+  margin: 0 0 8px;
+  font-size: 1.35rem;
+  color: #000;
+}
+
+.chroma-section__note {
+  margin: 0 0 16px;
+  color: #555;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.chroma-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.chroma-toggle input {
+  width: 18px;
+  height: 18px;
+}
+
+.chroma-panels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 900px) {
+  .chroma-panels {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chroma-panel__head {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+  color: #222;
+}
+
+.chroma-panel__hint {
+  margin: 0 0 10px;
+  font-size: 0.88rem;
+  color: #666;
+}
+
+.chroma-canvas-wrap {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  padding: 12px;
   display: flex;
   justify-content: center;
   align-items: center;
-  border: 1px solid #e5e5e5; /* 极客风格简洁边框 */
+  overflow: auto;
 }
 
-.preview-image {
+/* 棋盘格：便于观察透明抠图结果 */
+.chroma-canvas-wrap--checker {
+  background-color: #e8e8e8;
+  background-image:
+    linear-gradient(45deg, #ccc 25%, transparent 25%),
+    linear-gradient(-45deg, #ccc 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #ccc 75%),
+    linear-gradient(-45deg, transparent 75%, #ccc 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+}
+
+.chroma-canvas {
   max-width: 100%;
-  max-height: 400px;
+  height: auto;
+  display: block;
+  vertical-align: middle;
+}
+
+.chroma-canvas--interactive {
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.chroma-sample-info {
+  margin: 10px 0 0;
+  font-size: 0.85rem;
+  color: #333;
+  font-family: ui-monospace, monospace;
+}
+
+.chroma-preview-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.chroma-preview-toolbar button {
+  padding: 8px 14px;
+  border: 1px solid #000;
+  background: #fff;
   border-radius: 4px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.chroma-preview-toolbar button.is-active {
+  background: #000;
+  color: #fff;
+}
+
+.chroma-brush-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 16px;
+  margin-bottom: 8px;
+}
+
+.chroma-brush-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.92rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.chroma-brush-toggle input {
+  width: 18px;
+  height: 18px;
+}
+
+.chroma-brush-size {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.88rem;
+  color: #444;
+  min-width: 160px;
+  flex: 1;
+}
+
+.chroma-brush-size input[type='range'] {
+  width: 100%;
+}
+
+.chroma-brush-clear {
+  padding: 8px 14px;
+  border: 1px solid #000;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  align-self: flex-end;
+}
+
+.chroma-brush-clear:hover:not(:disabled) {
+  background: #f5f5f5;
+}
+
+.chroma-brush-clear:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.chroma-brush-hint {
+  margin: 0 0 10px;
+  font-size: 0.85rem;
+  color: #666;
+  line-height: 1.45;
+}
+
+.chroma-canvas--brush {
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.chroma-advanced {
+  margin-bottom: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.chroma-advanced__title {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+}
+
+.chroma-advanced__intro {
+  margin: 0 0 18px;
+  font-size: 0.88rem;
+  color: #555;
+  line-height: 1.5;
+}
+
+/* 三组：取色匹配 | 边缘 | 去溢色 */
+.chroma-advanced__groups {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch;
+}
+
+@media (max-width: 1024px) {
+  .chroma-advanced__groups {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chroma-advanced__group {
+  padding: 14px 16px;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chroma-advanced__group-title {
+  margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #eee;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #111;
+}
+
+.chroma-advanced__group-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.chroma-param {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.chroma-param__label,
+.chroma-param__label-text {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.chroma-param__label {
+  cursor: pointer;
+}
+
+.chroma-param__desc {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #666;
+  line-height: 1.45;
+}
+
+.chroma-param input[type='range'] {
+  width: 100%;
+}
+
+.chroma-param--checkbox .chroma-param__row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.chroma-param--checkbox input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.split-actions {
+  margin-top: 8px;
+}
+
+.split-button {
+  padding: 14px 32px;
+  background: #000;
+  color: #fff;
+  border: 2px solid #000;
+  border-radius: 4px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.split-button:hover:not(:disabled) {
+  background: #fff;
+  color: #000;
+}
+
+.split-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* 结果区域样式 */
