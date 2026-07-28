@@ -2,10 +2,10 @@
 setlocal EnableExtensions
 title PNGcut - Vite
 
-REM 切换到本 bat 所在目录（项目根目录）
-cd /d "%~dp0" 2>nul
+REM Always run from the folder where this BAT lives (project root)
+cd /d "%~dp0"
 if errorlevel 1 (
-    echo Failed to cd to script folder.
+    echo [ERROR] Cannot cd to script folder.
     echo Path: %~dp0
     goto :EOF_PAUSE
 )
@@ -17,11 +17,26 @@ echo ========================================
 echo Current dir: %CD%
 echo.
 
-REM 检查 node / npm（从资源管理器双击时 PATH 可能和终端不同）
+REM Explorer double-click may have a shorter PATH than PowerShell.
+REM If "where node" fails, try common Node.js install folders.
 where node >nul 2>&1
 if errorlevel 1 (
-    echo [ERROR] node not found. Install Node.js and enable "Add to PATH", then restart PC.
-    echo Download: https://nodejs.org/
+    if exist "%ProgramFiles%\nodejs\node.exe" (
+        set "PATH=%ProgramFiles%\nodejs;%PATH%"
+    )
+    if exist "%ProgramFiles(x86)%\nodejs\node.exe" (
+        set "PATH=%ProgramFiles(x86)%\nodejs;%PATH%"
+    )
+    if exist "%LocalAppData%\Programs\nodejs\node.exe" (
+        set "PATH=%LocalAppData%\Programs\nodejs;%PATH%"
+    )
+)
+
+where node >nul 2>&1
+if errorlevel 1 (
+    echo [ERROR] node not found.
+    echo Install Node.js LTS from https://nodejs.org/
+    echo Check "Add to PATH", then restart PC and try again.
     goto :EOF_PAUSE
 )
 
@@ -38,7 +53,8 @@ npm -v
 echo.
 
 if not exist "package.json" (
-    echo [ERROR] package.json not found. Put this BAT inside PNGcut project root.
+    echo [ERROR] package.json not found.
+    echo Put this BAT inside the PNGcut project root.
     goto :EOF_PAUSE
 )
 
@@ -52,11 +68,10 @@ if not exist "node_modules\" (
     echo.
 )
 
-echo Starting Vite. DO NOT close this window while testing.
-echo 浏览器地址一般为（须带末尾的 /PNGcut/ 路径^）:
+echo Starting Vite. Keep this window open while testing.
+echo Open in browser (note the trailing /PNGcut/ path):
 echo   http://127.0.0.1:5173/PNGcut/
-echo 若提示端口被占用，请先关掉其它 Vite 窗口或改占用 5173 的程序。
-echo 以本窗口下方 Vite 打印的 Local 行为准。
+echo If port 5173 is busy, close other Vite windows first.
 echo Stop server: press Ctrl+C in this window
 echo.
 echo ----------------------------------------
@@ -65,8 +80,9 @@ call npm run dev
 
 echo.
 echo ----------------------------------------
-echo Server process ended (exit code %ERRORLEVEL%^)
-echo 若浏览器无法打开，请把上面窗口里的报错完整复制发出来。
+echo Server ended. Exit code: %ERRORLEVEL%
+echo If the browser failed, copy any error text above and send it.
+
 :EOF_PAUSE
 echo.
 pause

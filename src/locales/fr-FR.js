@@ -20,26 +20,28 @@ export default {
   errorLoadFailed: 'Échec du chargement de l\'image, veuillez vérifier si le fichier est corrompu',
   errorReadFailed: 'Échec de la lecture du fichier',
   errorNoImages: 'Aucune image à télécharger !',
-  errorPickColor: 'Incrustation activée — cliquez sur l’image de gauche pour choisir la couleur de fond.',
+  errorPickColor: 'Incrustation activée — cliquez sur l’image de gauche pour choisir au moins une couleur de fond.',
   chromaSectionTitle: 'Incrustation et aperçu',
   chromaOptionalNote:
-    'Si le PNG a déjà de la transparence, désactivez l’incrustation puis Découper. Sinon activez et choisissez une couleur.',
+    'Si le PNG a déjà de la transparence, désactivez l’incrustation puis Découper. Sinon activez et choisissez une ou plusieurs couleurs.',
   chromaEnable: 'Activer l’incrustation (supprimer le fond opaque)',
-  pickColorTitle: 'Choisir la couleur de fond',
-  pickColorHint: 'Cliquez sur la couleur à traiter comme fond (fond vert, couleur unie, etc.).',
+  pickColorTitle: 'Choisir la/les couleur(s) de fond',
+  pickColorHint:
+    'Cliquez les couleurs à traiter comme fond. Plusieurs clics ajoutent plusieurs couleurs. Un clic proche met à jour un échantillon existant.',
   pickColorDisabled: 'Image d’origine si désactivé ; activez pour échantillonner.',
   previewTitle: 'Aperçu',
   previewResult: 'Résultat',
   previewMask: 'Masque',
   advancedTitle: 'Avancé',
   advancedIntro:
-    'Trois blocs : ressemblance au fond, douceur du bord, puis spill. Si sujet et fond se ressemblent, utilisez aussi le pinceau de protection.',
+    'Ressemblance au fond → douceur du bord → spill → coupure d’alpha faible / érosion. Si sujet et fond se ressemblent, utilisez aussi le pinceau de protection.',
   advancedGroupMatch: 'Échantillonnage & couleur',
   advancedGroupEdge: 'Bord & transition alpha',
   advancedGroupSpill: 'Spill (liseré de couleur)',
+  advancedGroupDefringe: 'Anti-frange (alpha faible / érosion)',
   tolerance: 'Tolérance couleur',
   toleranceDesc:
-    'Les pixels proches de la couleur échantillonnée (jusqu’à cette distance) deviennent transparents. Trop haut mange le sujet ; trop bas laisse du fond.',
+    'Les pixels proches de n’importe quel échantillon (jusqu’à cette distance) deviennent transparents. Trop haut mange le sujet ; trop bas laisse du fond.',
   softness: 'Feather (px)',
   softnessDesc:
     'Largeur de la transition opaque → transparent près du seuil. Plus grand = bord plus doux. Actif seulement si l’adoucissement est coché.',
@@ -53,17 +55,28 @@ export default {
     'Réduit la couleur du fond qui déteint sur le sujet (vert d’écran, etc.). Désactivé = pas de correction de teinte.',
   despillStrength: 'Intensité spill',
   despillStrengthDesc: 'Force du déspill. Trop élevé peut griser les bords.',
+  defringe: 'Anti-frange complet',
+  defringeDesc:
+    'Décontamine le mélange de fond, coupe les alphas faibles, puis érode le contour. Si la silhouette est mangée, mettez l’érosion à 0.',
+  erodePx: 'Érosion du bord',
+  erodePxDesc:
+    'Réduit les zones opaques de 0 à 3 px. 1 px enlève souvent le liseré blanc AA ; trop haut mange le sujet.',
+  alphaCutoff: 'Seuil d’alpha faible',
+  alphaCutoffDesc:
+    'Les pixels sous ce seuil d’alpha deviennent totalement transparents (fantômes de feather). Trop haut durcit les bords.',
   sampleRadius: 'Rayon d’échantillonnage',
   sampleRadiusDesc:
     'Moyenne autour du clic pour la couleur de fond. Un peu plus large résiste au bruit ; trop large mélange le sujet.',
   runSplit: 'Découper',
   runSplitAgain: 'Redécouper',
-  colorPicked: 'Échantillon',
+  colorPicked: 'Échantillons de fond',
+  clearAllSamples: 'Tout effacer',
+  removeSample: 'Supprimer cette couleur',
   brushProtect: 'Pinceau de protection (zones peintes = pixels d’origine)',
   brushDiameter: 'Diamètre du pinceau',
   brushClear: 'Effacer les coups',
   brushHint:
-    'Vue résultat incrusté : peignez pour restaurer les zones trop transparentes. Désactivé en vue masque ; nouvelle couleur de fond efface les coups.',
+    'Vue résultat : peignez pour restaurer les zones trop transparentes. Désactivé en vue masque ; changer les échantillons efface les coups.',
   
   // Aperçu et résultats
   resultsTitle: 'Résultats de Division',

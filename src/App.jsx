@@ -93,7 +93,8 @@ function App() {
   const [error, setError] = useState('')
 
   const [chromaEnabled, setChromaEnabled] = useState(false)
-  const [colorSample, setColorSample] = useState(null)
+  /** 多个背景样本色：点击取色会追加；可单独删除 */
+  const [colorSamples, setColorSamples] = useState([])
 
   const [tolerance, setTolerance] = useState(4)
   const [softness, setSoftness] = useState(14)
@@ -103,6 +104,13 @@ function App() {
   const [edgeRadius, setEdgeRadius] = useState(22)
   const [sampleRadius, setSampleRadius] = useState(6)
 
+  /** 彻底去白边：去污色 + 弱透明剔除 + 边缘收缩（参考 character-sprite-splitter） */
+  const [defringeEnabled, setDefringeEnabled] = useState(true)
+  /** 边缘收缩像素数：不透明区域向内腐蚀，掐掉细白轮廓 */
+  const [erodePx, setErodePx] = useState(1)
+  /** 弱透明剔除阈值：alpha 低于此值直接变全透明，去掉羽化残影 */
+  const [alphaCutoff, setAlphaCutoff] = useState(28)
+
   const [previewMode, setPreviewMode] = useState('result')
 
   /** 保护画笔：仅在「抠图结果」预览上涂抹，恢复与背景同色被误抠的区域 */
@@ -111,9 +119,10 @@ function App() {
   const [brushDiameter, setBrushDiameter] = useState(28)
 
   const buildColorKeyOptions = useCallback(() => {
-    if (!colorSample) return null
+    if (!colorSamples.length) return null
     return {
-      sample: colorSample,
+      // 多色抠图：像素只要接近任一样本色就会被抠掉
+      samples: colorSamples,
       tolerance,
       softness,
       despill,
@@ -121,10 +130,13 @@ function App() {
       edgeRadius,
       smoothing,
       despillEnabled,
+      defringeEnabled,
+      erodePx,
+      alphaCutoff,
       algorithm: 'enhanced',
     }
   }, [
-    colorSample,
+    colorSamples,
     tolerance,
     softness,
     despill,
@@ -132,6 +144,9 @@ function App() {
     edgeRadius,
     smoothing,
     despillEnabled,
+    defringeEnabled,
+    erodePx,
+    alphaCutoff,
   ])
 
   /** 重绘右侧预览（抠图结果模式下套用保护蒙版） */
@@ -174,7 +189,7 @@ function App() {
     setLoading(true)
     setCutImages([])
     setOriginalImageUrl(null)
-    setColorSample(null)
+    setColorSamples([])
     sourceCanvasRef.current = null
     restoreMaskCanvasRef.current = null
     keyedImageCacheRef.current = null
@@ -229,20 +244,36 @@ function App() {
     const ctx = sampleEl.getContext('2d')
     ctx.drawImage(src, 0, 0)
 
-    if (colorSample) {
-      ctx.save()
-      ctx.strokeStyle = '#ff8f1f'
-      ctx.lineWidth = Math.max(2, src.width / 220)
-      ctx.beginPath()
-      ctx.arc(colorSample.x, colorSample.y, Math.max(10, src.width / 50), 0, Math.PI * 2)
-      ctx.stroke()
-      ctx.fillStyle = '#ff8f1f'
-      ctx.beginPath()
-      ctx.arc(colorSample.x, colorSample.y, Math.max(3, src.width / 130), 0, Math.PI * 2)
-      ctx.fill()
-      ctx.restore()
+    // 在取色预览上标出每一个已选背景色的位置
+    if (colorSamples.length) {
+      const lineW = Math.max(2, src.width / 220)
+      const ringR = Math.max(10, src.width / 50)
+      const dotR = Math.max(3, src.width / 130)
+      colorSamples.forEach((sample, idx) => {
+        ctx.save()
+        ctx.strokeStyle = '#ff8f1f'
+        ctx.lineWidth = lineW
+        ctx.beginPath()
+        ctx.arc(sample.x, sample.y, ringR, 0, Math.PI * 2)
+        ctx.stroke()
+        ctx.fillStyle = '#ff8f1f'
+        ctx.beginPath()
+        ctx.arc(sample.x, sample.y, dotR, 0, Math.PI * 2)
+        ctx.fill()
+        // 序号方便对照下方色块列表
+        ctx.fillStyle = '#fff'
+        ctx.strokeStyle = '#000'
+        ctx.lineWidth = 2
+        ctx.font = `bold ${Math.max(12, Math.round(src.width / 40))}px sans-serif`
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'middle'
+        const label = String(idx + 1)
+        ctx.strokeText(label, sample.x, sample.y - ringR - 8)
+        ctx.fillText(label, sample.x, sample.y - ringR - 8)
+        ctx.restore()
+      })
     }
-  }, [originalImageUrl, imageRevision, colorSample])
+  }, [originalImageUrl, imageRevision, colorSamples])
 
   useLayoutEffect(() => {
     const src = sourceCanvasRef.current
@@ -278,7 +309,7 @@ function App() {
     originalImageUrl,
     imageRevision,
     chromaEnabled,
-    colorSample,
+    colorSamples,
     previewMode,
     tolerance,
     softness,
@@ -286,9 +317,16 @@ function App() {
     despillEnabled,
     despill,
     edgeRadius,
+    defringeEnabled,
+    erodePx,
+    alphaCutoff,
     buildColorKeyOptions,
   ])
 
+  /**
+   * 点击取色：追加一个背景样本色（多色抠图）
+   * 若与已有样本色过于接近（色距很小），则更新该样本的位置，避免重复堆积
+   */
   const handleSamplePointerDown = (event) => {
     if (!chromaEnabled || !sourceCanvasRef.current || !sampleCanvasRef.current) return
 
@@ -301,16 +339,42 @@ function App() {
     try {
       clearRestoreMask(restoreMaskCanvasRef)
       const sample = sampleCanvasColor(src, x, y, sampleRadius)
-      setColorSample(sample)
+      setColorSamples((prev) => {
+        const DUP_DIST = 6
+        const nearIdx = prev.findIndex((s) => {
+          const dr = s.rgb.r - sample.rgb.r
+          const dg = s.rgb.g - sample.rgb.g
+          const db = s.rgb.b - sample.rgb.b
+          return Math.sqrt(dr * dr + dg * dg + db * db) / Math.sqrt(3) <= DUP_DIST
+        })
+        if (nearIdx >= 0) {
+          const next = [...prev]
+          next[nearIdx] = sample
+          return next
+        }
+        return [...prev, sample]
+      })
       setError('')
     } catch (err) {
       console.error(err)
     }
   }
 
+  /** 删除某一个背景样本色 */
+  const handleRemoveSample = (index) => {
+    clearRestoreMask(restoreMaskCanvasRef)
+    setColorSamples((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  /** 清空全部背景样本色 */
+  const handleClearSamples = () => {
+    clearRestoreMask(restoreMaskCanvasRef)
+    setColorSamples([])
+  }
+
   /** 画笔是否允许开启（不依赖 ref，避免取色后同一帧 ref 尚未写入） */
   const brushCanPaint =
-    chromaEnabled && colorSample && previewMode === 'result'
+    chromaEnabled && colorSamples.length > 0 && previewMode === 'result'
 
   const handlePreviewBrushDown = (event) => {
     if (!brushToolActive || !brushCanPaint) return
@@ -362,7 +426,7 @@ function App() {
       return
     }
 
-    if (chromaEnabled && !colorSample) {
+    if (chromaEnabled && colorSamples.length === 0) {
       setError(t.errorPickColor)
       return
     }
@@ -373,7 +437,7 @@ function App() {
 
     try {
       let canvasToSplit = src
-      if (chromaEnabled && colorSample) {
+      if (chromaEnabled && colorSamples.length > 0) {
         const opts = buildColorKeyOptions()
         if (opts) {
           const { image: keyed } = applyColorKey(src, opts)
@@ -456,7 +520,7 @@ function App() {
                   onChange={(e) => {
                     setChromaEnabled(e.target.checked)
                     if (!e.target.checked) {
-                      setColorSample(null)
+                      setColorSamples([])
                       setBrushToolActive(false)
                     }
                   }}
@@ -477,11 +541,47 @@ function App() {
                       onPointerDown={handleSamplePointerDown}
                     />
                   </div>
-                  {colorSample && chromaEnabled && (
-                    <p className="chroma-sample-info">
-                      {t.colorPicked}: {colorSample.hex} (RGB {colorSample.rgb.r},{colorSample.rgb.g},
-                      {colorSample.rgb.b})
-                    </p>
+                  {/* 多样本色列表：色块 + 色值 + 删除 */}
+                  {chromaEnabled && colorSamples.length > 0 && (
+                    <div className="chroma-sample-list">
+                      <div className="chroma-sample-list__head">
+                        <span>
+                          {t.colorPicked}（{colorSamples.length}）
+                        </span>
+                        <button
+                          type="button"
+                          className="chroma-sample-clear"
+                          onClick={handleClearSamples}
+                        >
+                          {t.clearAllSamples}
+                        </button>
+                      </div>
+                      <ul className="chroma-sample-swatches">
+                        {colorSamples.map((sample, index) => (
+                          <li key={`${sample.hex}-${sample.x}-${sample.y}-${index}`} className="chroma-sample-swatch">
+                            <span className="chroma-sample-swatch__ord">{index + 1}</span>
+                            <span
+                              className="chroma-sample-swatch__color"
+                              style={{ background: sample.hex }}
+                              title={sample.hex}
+                            />
+                            <span className="chroma-sample-swatch__meta">
+                              {sample.hex}
+                              <br />
+                              RGB {sample.rgb.r},{sample.rgb.g},{sample.rgb.b}
+                            </span>
+                            <button
+                              type="button"
+                              className="chroma-sample-swatch__remove"
+                              onClick={() => handleRemoveSample(index)}
+                              aria-label={t.removeSample}
+                            >
+                              ×
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
                 </div>
 
@@ -672,6 +772,54 @@ function App() {
                           value={despill}
                           onChange={(e) => setDespill(Number(e.target.value))}
                           disabled={!despillEnabled}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 4. 去白边：弱透明剔除 + 边缘收缩 */}
+                  <div className="chroma-advanced__group">
+                    <h4 className="chroma-advanced__group-title">{t.advancedGroupDefringe}</h4>
+                    <div className="chroma-advanced__group-fields">
+                      <div className="chroma-param chroma-param--checkbox">
+                        <label className="chroma-param__row">
+                          <input
+                            type="checkbox"
+                            checked={defringeEnabled}
+                            onChange={(e) => setDefringeEnabled(e.target.checked)}
+                          />
+                          <span className="chroma-param__label-text">{t.defringe}</span>
+                        </label>
+                        <p className="chroma-param__desc">{t.defringeDesc}</p>
+                      </div>
+                      <div className="chroma-param">
+                        <label className="chroma-param__label" htmlFor="adv-erode">
+                          {t.erodePx}: {erodePx}px
+                        </label>
+                        <p className="chroma-param__desc">{t.erodePxDesc}</p>
+                        <input
+                          id="adv-erode"
+                          type="range"
+                          min={0}
+                          max={3}
+                          value={erodePx}
+                          onChange={(e) => setErodePx(Number(e.target.value))}
+                          disabled={!defringeEnabled}
+                        />
+                      </div>
+                      <div className="chroma-param">
+                        <label className="chroma-param__label" htmlFor="adv-alpha-cutoff">
+                          {t.alphaCutoff}: {alphaCutoff}
+                        </label>
+                        <p className="chroma-param__desc">{t.alphaCutoffDesc}</p>
+                        <input
+                          id="adv-alpha-cutoff"
+                          type="range"
+                          min={0}
+                          max={80}
+                          value={alphaCutoff}
+                          onChange={(e) => setAlphaCutoff(Number(e.target.value))}
+                          disabled={!defringeEnabled}
                         />
                       </div>
                     </div>

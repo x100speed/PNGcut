@@ -20,26 +20,28 @@ export default {
   errorLoadFailed: '이미지 로드 실패, 파일이 손상되었는지 확인하세요',
   errorReadFailed: '파일 읽기 실패',
   errorNoImages: '다운로드할 이미지가 없습니다!',
-  errorPickColor: '크로마키가 켜져 있습니다. 왼쪽 이미지에서 배경색을 클릭하세요.',
+  errorPickColor: '크로마키가 켜져 있습니다. 왼쪽 이미지에서 배경색을 하나 이상 클릭하세요.',
   chromaSectionTitle: '크로마키 및 미리보기',
   chromaOptionalNote:
-    'PNG에 이미 투명이 있으면 크로마키를 끄고 분할하세요. 불투명 배경은 켜고 색을 선택하세요.',
+    'PNG에 이미 투명이 있으면 크로마키를 끄고 분할하세요. 불투명 배경은 켜고 색을 선택하세요(여러 번 클릭해 다중 색 가능).',
   chromaEnable: '크로마키 사용(불투명 배경 제거)',
   pickColorTitle: '배경색 선택',
-  pickColorHint: '제거할 배경 색을 클릭(그린스크린, 단색 등).',
+  pickColorHint:
+    '제거할 배경 색을 클릭. 여러 번 클릭해 여러 색을 추가할 수 있습니다. 비슷한 색은 기존 샘플을 갱신합니다.',
   pickColorDisabled: '끄면 원본 표시. 켜면 색을 선택할 수 있습니다.',
   previewTitle: '미리보기',
   previewResult: '키잉 결과',
   previewMask: '매트',
   advancedTitle: '고급',
   advancedIntro:
-    '배경과 얼마나 비슷하면 제거할지 → 가장자리 부드러움 → 스필 보정 순입니다. 피사체와 배경 색이 비슷하면 위 보호 브러시를 함께 쓰세요.',
+    '배경 유사도 → 가장자리 부드러움 → 스필 보정 → 약한 알파 제거/수축 순입니다. 피사체와 배경 색이 비슷하면 보호 브러시를 함께 쓰세요.',
   advancedGroupMatch: '샘플링·색 일치',
   advancedGroupEdge: '가장자리·투명도 전환',
   advancedGroupSpill: '스필 제거(색 번짐)',
+  advancedGroupDefringe: '흰 테두리 제거(약한 알파/수축)',
   tolerance: '색 허용 오차',
   toleranceDesc:
-    '샘플 배경색과 이 거리 안이면 투명 처리합니다. 크면 과하게 잘리고 피사체까지 잘릴 수 있고, 작으면 배경이 남을 수 있습니다.',
+    '어느 샘플 배경색과도 이 거리 안이면 투명 처리합니다. 크면 과하게 잘리고, 작으면 배경이 남을 수 있습니다.',
   softness: '페더(px)',
   softnessDesc:
     '경계 근처에서 불투명→투명으로 바뀌는 폭(px). 클수록 부드럽습니다. 「가장자리 페더」를 켠 경우에만 적용됩니다.',
@@ -53,17 +55,28 @@ export default {
     '배경색이 피사체 가장자리에 배는 현상(그린 스크린 등)을 줄입니다. 끄면 색 보정 없음.',
   despillStrength: '스필 강도',
   despillStrengthDesc: '보정 세기. 너무 높으면 가장자리가 회색빛으로 부자연스러울 수 있습니다.',
+  defringe: '흰 테두리 완전 제거',
+  defringeDesc:
+    '반투명 픽셀의 배경 혼색 제거, 옅은 잔영 컷, 가장자리 수축을 수행합니다. 윤곽이 깎이면 수축을 0으로 하세요.',
+  erodePx: '가장자리 수축',
+  erodePxDesc:
+    '불투명 영역을 0~3px 안쪽으로 침식. 1px면 AA 흰 테두리를 줄이기 쉽고, 너무 크면 윤곽이 깎입니다.',
+  alphaCutoff: '약한 알파 제거',
+  alphaCutoffDesc:
+    '이 임계값 미만 알파를 완전 투명으로 바꿔 페더 잔영을 제거합니다. 너무 크면 가장자리가 딱딱해집니다.',
   sampleRadius: '색 샘플 반경',
   sampleRadiusDesc:
     '클릭 주변을 평균해 배경 샘플을 만듭니다. 약간 크면 노이즈에 강하지만 너무 크면 피사체 색이 섞일 수 있습니다.',
   runSplit: '분할 실행',
   runSplitAgain: '다시 분할',
-  colorPicked: '샘플',
+  colorPicked: '배경 샘플',
+  clearAllSamples: '모두 지우기',
+  removeSample: '이 색 삭제',
   brushProtect: '보호 브러시(칠한 영역은 원본 유지)',
   brushDiameter: '브러시 직경',
   brushClear: '칠 지우기',
   brushHint:
-    '키잉 결과 보기에서 잘못 투명해진 부분을 칠해 원본으로 복원. 마스크 보기에서는 브러시 비활성. 배경 색 재선택 시 칠이 지워집니다.',
+    '키잉 결과 보기에서 잘못 투명해진 부분을 칠해 원본으로 복원. 마스크 보기에서는 브러시 비활성. 샘플 변경 시 칠이 지워집니다.',
   
   // 미리보기 및 결과
   resultsTitle: '분할 결과',

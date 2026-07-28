@@ -192,6 +192,105 @@
   font-family: ui-monospace, monospace;
 }
 
+/* 多背景样本色列表 */
+.chroma-sample-list {
+  margin-top: 12px;
+}
+
+.chroma-sample-list__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.chroma-sample-clear {
+  padding: 4px 10px;
+  border: 1px solid #999;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  color: #555;
+}
+
+.chroma-sample-clear:hover {
+  background: #f5f5f5;
+  border-color: #333;
+}
+
+.chroma-sample-swatches {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.chroma-sample-swatch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 6px;
+}
+
+.chroma-sample-swatch__ord {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ff8f1f;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.chroma-sample-swatch__color {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  flex-shrink: 0;
+}
+
+.chroma-sample-swatch__meta {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.75rem;
+  color: #555;
+  font-family: ui-monospace, monospace;
+  line-height: 1.35;
+}
+
+.chroma-sample-swatch__remove {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #ddd;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: #c0392b;
+  flex-shrink: 0;
+}
+
+.chroma-sample-swatch__remove:hover {
+  background: #fff5f5;
+  border-color: #c0392b;
+}
+
 .chroma-preview-toolbar {
   display: flex;
   gap: 8px;
@@ -297,12 +396,18 @@
   line-height: 1.5;
 }
 
-/* 三组：取色匹配 | 边缘 | 去溢色 */
+/* 三组→四组：取色匹配 | 边缘 | 去溢色 | 去白边 */
 .chroma-advanced__groups {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
   align-items: stretch;
+}
+
+@media (min-width: 1200px) {
+  .chroma-advanced__groups {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 1024px) {
