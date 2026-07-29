@@ -35,7 +35,7 @@ export default {
   previewMask: 'Matte',
   advancedTitle: 'Advanced',
   advancedIntro:
-    'Grouped steps: how “similar to background” is keyed, how soft the edge is, spill cleanup, then weak-alpha cut & edge erode for white fringes. Use the protect brush if subject and background colors overlap.',
+    'Grouped steps: how “similar to background” is keyed (with interior protection), how soft the edge is, spill cleanup, then weak-alpha cut & edge erode. Use the protect brush if subject and background colors overlap.',
   advancedGroupMatch: 'Sampling & color match',
   advancedGroupEdge: 'Edge & alpha transition',
   advancedGroupSpill: 'Spill removal (edge tint)',
@@ -43,6 +43,12 @@ export default {
   tolerance: 'Color tolerance',
   toleranceDesc:
     'Pixels within this color distance from any sampled background are keyed transparent. Higher removes more but can eat subject colors; too low leaves background fringes.',
+  protectInterior: 'Protect interior (connected key)',
+  protectInteriorDesc:
+    'Only keys background connected to the image edge. Interior same-color areas (white clothes, light gear) stay opaque. Keep on in most cases.',
+  enclosedMin: 'Enclosed region threshold',
+  enclosedMinDesc:
+    'Interior same-color holes not connected to the edge (armpits, cutouts) are keyed only if their area ≥ this pixel count. Higher = safer interior; 0 keys all candidates.',
   softness: 'Feather (px)',
   softnessDesc:
     'Width of the transition from opaque to transparent near the threshold. Larger = softer edge. Only applies when “Edge feathering” is on.',

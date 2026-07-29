@@ -110,6 +110,14 @@ function App() {
   const [erodePx, setErodePx] = useState(1)
   /** 弱透明剔除阈值：alpha 低于此值直接变全透明，去掉羽化残影 */
   const [alphaCutoff, setAlphaCutoff] = useState(28)
+  /**
+   * 保护角色内部：只抠与画面边缘连通的背景，避免白衣等内部同色被抠成透明
+   */
+  const [protectInterior, setProtectInterior] = useState(true)
+  /**
+   * 封闭区域扣除阈值（像素面积）：内部镂空够大才抠；过小则保留，防止误伤
+   */
+  const [enclosedMin, setEnclosedMin] = useState(200)
 
   const [previewMode, setPreviewMode] = useState('result')
 
@@ -133,6 +141,8 @@ function App() {
       defringeEnabled,
       erodePx,
       alphaCutoff,
+      protectInterior,
+      enclosedMin,
       algorithm: 'enhanced',
     }
   }, [
@@ -147,6 +157,8 @@ function App() {
     defringeEnabled,
     erodePx,
     alphaCutoff,
+    protectInterior,
+    enclosedMin,
   ])
 
   /** 重绘右侧预览（抠图结果模式下套用保护蒙版） */
@@ -320,6 +332,8 @@ function App() {
     defringeEnabled,
     erodePx,
     alphaCutoff,
+    protectInterior,
+    enclosedMin,
     buildColorKeyOptions,
   ])
 
@@ -692,6 +706,34 @@ function App() {
                           max={120}
                           value={tolerance}
                           onChange={(e) => setTolerance(Number(e.target.value))}
+                        />
+                      </div>
+                      {/* 连通抠像：避免内部同色被抠成透明 */}
+                      <div className="chroma-param chroma-param--checkbox">
+                        <label className="chroma-param__row">
+                          <input
+                            type="checkbox"
+                            checked={protectInterior}
+                            onChange={(e) => setProtectInterior(e.target.checked)}
+                          />
+                          <span className="chroma-param__label-text">{t.protectInterior}</span>
+                        </label>
+                        <p className="chroma-param__desc">{t.protectInteriorDesc}</p>
+                      </div>
+                      <div className="chroma-param">
+                        <label className="chroma-param__label" htmlFor="adv-enclosed-min">
+                          {t.enclosedMin}: {enclosedMin}
+                        </label>
+                        <p className="chroma-param__desc">{t.enclosedMinDesc}</p>
+                        <input
+                          id="adv-enclosed-min"
+                          type="range"
+                          min={0}
+                          max={5000}
+                          step={10}
+                          value={enclosedMin}
+                          onChange={(e) => setEnclosedMin(Number(e.target.value))}
+                          disabled={!protectInterior}
                         />
                       </div>
                     </div>

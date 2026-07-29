@@ -174,6 +174,113 @@ export function erodeAlpha(alphaArr, width, height, radius) {
   return cur
 }
 
+/** 色距落在容差+羽化范围内 → 视为「可能是背景」的候选像素 */
+function isBackgroundCandidate(distance, tolerance, softness, smoothing) {
+  const feather = smoothing ? Math.max(0, softness) : 0
+  return distance <= tolerance + feather
+}
+
+/**
+ * 从图像四边做泛洪：只标记与画面边缘连通的背景候选
+ * （角色内部同色区域如白衣、浅色装备，不会被当成背景）
+ */
+export function buildConnectedBackgroundMask(width, height, isCandidate) {
+  const total = width * height
+  const connected = new Uint8Array(total)
+  const queue = new Int32Array(total)
+  let head = 0
+  let tail = 0
+
+  const enqueue = (index) => {
+    if (index < 0 || index >= total || connected[index] || !isCandidate(index)) return
+    connected[index] = 1
+    queue[tail++] = index
+  }
+
+  // 从四边种子开始扩散
+  for (let x = 0; x < width; x++) {
+    enqueue(x)
+    enqueue((height - 1) * width + x)
+  }
+  for (let y = 1; y < height - 1; y++) {
+    enqueue(y * width)
+    enqueue(y * width + width - 1)
+  }
+
+  while (head < tail) {
+    const index = queue[head++]
+    const x = index % width
+    const y = (index / width) | 0
+    if (x > 0) enqueue(index - 1)
+    if (x < width - 1) enqueue(index + 1)
+    if (y > 0) enqueue(index - width)
+    if (y < height - 1) enqueue(index + width)
+  }
+
+  return connected
+}
+
+/**
+ * 封闭区域扣除：内部未与边缘连通的背景候选（如腋下缝隙、镂空）
+ * - minEnclosedArea <= 0：所有候选都抠（等同关闭保护）
+ * - 面积 >= 阈值的封闭块才抠；小于阈值的保留（避免误伤内部小块同色）
+ */
+export function augmentBackgroundMaskWithEnclosedRegions(
+  width,
+  height,
+  isCandidate,
+  edgeConnected,
+  minEnclosedArea,
+) {
+  const total = width * height
+  const result = new Uint8Array(edgeConnected)
+
+  if (minEnclosedArea <= 0) {
+    for (let i = 0; i < total; i++) {
+      if (isCandidate(i)) result[i] = 1
+    }
+    return result
+  }
+
+  const visited = new Uint8Array(total)
+  const queue = new Int32Array(total)
+
+  for (let start = 0; start < total; start++) {
+    if (!isCandidate(start) || edgeConnected[start] || visited[start]) continue
+
+    let head = 0
+    let tail = 0
+    let area = 0
+    queue[tail++] = start
+    visited[start] = 1
+
+    while (head < tail) {
+      const index = queue[head++]
+      area++
+      const x = index % width
+      const y = (index / width) | 0
+      const tryN = (n) => {
+        if (n < 0 || n >= total || visited[n] || !isCandidate(n) || edgeConnected[n]) return
+        visited[n] = 1
+        queue[tail++] = n
+      }
+      if (x > 0) tryN(index - 1)
+      if (x < width - 1) tryN(index + 1)
+      if (y > 0) tryN(index - width)
+      if (y < height - 1) tryN(index + width)
+    }
+
+    // 封闭块够大才当作真正背景抠掉
+    if (area >= minEnclosedArea) {
+      for (let qi = 0; qi < tail; qi++) {
+        result[queue[qi]] = 1
+      }
+    }
+  }
+
+  return result
+}
+
 /**
  * 边缘残白清理：与透明邻接、且颜色仍接近样本色的像素，直接抠掉
  */
@@ -260,6 +367,8 @@ export function sampleCanvasColor(canvas, x, y, radius) {
  * @param {object} options
  *   - samples: 多样本色数组（优先），或 sample: 单样本（兼容）
  *   - tolerance / softness / smoothing / algorithm
+ *   - protectInterior: 连通抠除，保护角色内部同色（默认建议开启）
+ *   - enclosedMin: 封闭区域扣除阈值（像素面积）；内部大块镂空才抠
  *   - despillEnabled / despill / edgeRadius
  *   - defringeEnabled: 彻底去白边（去污色 + 弱透明 + 边缘收缩）
  *   - erodePx: 边缘收缩像素（0~3）
@@ -297,11 +406,70 @@ export function applyColorKey(source, options) {
   const maskPixels = maskImageData.data
 
   const distances = new Float32Array(pixelCount)
+  const rawOpacities = new Float32Array(pixelCount)
+  // 记录每个像素最近的样本色下标，第二遍写像素时直接取用
+  const nearestSampleIndex = new Int16Array(pixelCount)
   const alphas = new Uint8ClampedArray(pixelCount)
   const defringeEnabled = Boolean(options.defringeEnabled)
+  const protectInterior = options.protectInterior !== false
+  const enclosedMin = Math.max(0, Number(options.enclosedMin) || 0)
   const erodePx = Math.max(0, Math.round(options.erodePx || 0))
   const alphaCutoff = Math.max(0, Number(options.alphaCutoff) || 0)
 
+  // ----- 第一遍：算色距与原始透明度 -----
+  for (let i = 0; i < pixelCount; i++) {
+    const index = i * 4
+
+    if (sourcePixels[index + 3] < 8) {
+      distances[i] = 9999
+      rawOpacities[i] = 0
+      nearestSampleIndex[i] = 0
+      continue
+    }
+
+    const pixel = {
+      r: sourcePixels[index],
+      g: sourcePixels[index + 1],
+      b: sourcePixels[index + 2],
+    }
+
+    // 多色：取与任一背景样本的最小色距
+    let bestDist = Infinity
+    let bestIdx = 0
+    for (let s = 0; s < sampleRgbs.length; s++) {
+      const dist = computeColorDistance(pixel, sampleRgbs[s], options.algorithm)
+      if (dist < bestDist) {
+        bestDist = dist
+        bestIdx = s
+      }
+    }
+    distances[i] = bestDist
+    nearestSampleIndex[i] = bestIdx
+    rawOpacities[i] = getOpacityForDistance(
+      bestDist,
+      options.tolerance,
+      options.softness,
+      options.algorithm,
+      options.smoothing,
+    )
+  }
+
+  // ----- 连通背景蒙版：只抠「边缘连通」或「够大的封闭空洞」-----
+  let keyedBg = null
+  if (protectInterior) {
+    const isCandidate = (i) =>
+      isBackgroundCandidate(distances[i], options.tolerance, options.softness, options.smoothing)
+    const edge = buildConnectedBackgroundMask(width, height, isCandidate)
+    keyedBg = augmentBackgroundMaskWithEnclosedRegions(
+      width,
+      height,
+      isCandidate,
+      edge,
+      enclosedMin,
+    )
+  }
+
+  // ----- 第二遍：写像素（内部同色不在 keyedBg 上 → 强制不透明）-----
   for (let i = 0; i < pixelCount; i++) {
     const index = i * 4
     const pixel = {
@@ -310,9 +478,7 @@ export function applyColorKey(source, options) {
       b: sourcePixels[index + 2],
     }
 
-    // 已接近全透明的像素：跳过色键，保留透明
     if (sourcePixels[index + 3] < 8) {
-      distances[i] = 9999
       outputPixels[index] = pixel.r
       outputPixels[index + 1] = pixel.g
       outputPixels[index + 2] = pixel.b
@@ -325,22 +491,15 @@ export function applyColorKey(source, options) {
       continue
     }
 
-    // 多色：取与任一背景样本的最小色距
-    const { distance, sample: nearestSample } = computeMinColorDistance(
-      pixel,
-      sampleRgbs,
-      options.algorithm,
-    )
-    distances[i] = distance
+    const distance = distances[i]
+    const nearestSample = sampleRgbs[nearestSampleIndex[i]]
+    let opacity = rawOpacities[i]
 
-    let opacity = getOpacityForDistance(
-      distance,
-      options.tolerance,
-      options.softness,
-      options.algorithm,
-      options.smoothing,
-    )
-    // 乘上原图自身 alpha，避免半透明原图被抬高
+    // 关键：不在「应抠背景」蒙版上的像素（例如白衣内部），一律保留
+    if (keyedBg && keyedBg[i] !== 1) {
+      opacity = 1
+    }
+
     opacity *= sourcePixels[index + 3] / 255
 
     const edgeWeight =
@@ -350,7 +509,6 @@ export function applyColorKey(source, options) {
 
     let adjustedPixel = pixel
 
-    // 去污色：半透明像素里扣掉混入的背景色（减少白边）
     if (defringeEnabled) {
       adjustedPixel = decontaminateColor(adjustedPixel, nearestSample, opacity)
     }
@@ -364,7 +522,6 @@ export function applyColorKey(source, options) {
       )
     }
 
-    // 弱透明直接剔掉，避免羽化残影发白
     if (defringeEnabled && opacity * 255 < alphaCutoff) {
       opacity = 0
     }
@@ -403,7 +560,6 @@ export function applyColorKey(source, options) {
       }
     }
 
-    // 腐蚀后再做一次弱透明剔除
     if (alphaCutoff > 0) {
       for (let i = 0; i < pixelCount; i++) {
         if (outputPixels[i * 4 + 3] < alphaCutoff) {
@@ -412,7 +568,6 @@ export function applyColorKey(source, options) {
       }
     }
 
-    // 同步蒙版预览
     for (let i = 0; i < pixelCount; i++) {
       const a = outputPixels[i * 4 + 3]
       const o = i * 4

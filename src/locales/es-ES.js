@@ -34,7 +34,7 @@ export default {
   previewMask: 'Mate',
   advancedTitle: 'Avanzado',
   advancedIntro:
-    'Parecido al fondo → suavidad del borde → spill → corte de alfa débil / erosión. Si sujeto y fondo se parecen, usa también el pincel de protección.',
+    'Parecido al fondo → protección interior → suavidad del borde → spill → corte de alfa débil / erosión. Si sujeto y fondo se parecen, usa también el pincel de protección.',
   advancedGroupMatch: 'Muestreo y color',
   advancedGroupEdge: 'Borde y transición alfa',
   advancedGroupSpill: 'Spill (tinte en el borde)',
@@ -42,6 +42,12 @@ export default {
   tolerance: 'Tolerancia de color',
   toleranceDesc:
     'Los píxeles cercanos a cualquier muestra (hasta esta distancia) se vuelven transparentes. Alto puede comer el sujeto; bajo deja fondo.',
+  protectInterior: 'Proteger interior (clave conectada)',
+  protectInteriorDesc:
+    'Solo recorta el fondo conectado al borde de la imagen. Zonas interiores del mismo color (ropa blanca, etc.) siguen opacas. Déjalo activado en general.',
+  enclosedMin: 'Umbral de regiones cerradas',
+  enclosedMinDesc:
+    'Los huecos interiores del mismo color no conectados al borde (axilas, recortes) solo se recortan si su área ≥ este número de píxeles. Más alto = interior más seguro; 0 recorta todos los candidatos.',
   softness: 'Suavizado (px)',
   softnessDesc:
     'Ancho de la transición opaco → transparente cerca del umbral. Mayor = borde más suave. Solo si “Suavizado de bordes” está activado.',

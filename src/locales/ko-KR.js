@@ -34,7 +34,7 @@ export default {
   previewMask: '매트',
   advancedTitle: '고급',
   advancedIntro:
-    '배경 유사도 → 가장자리 부드러움 → 스필 보정 → 약한 알파 제거/수축 순입니다. 피사체와 배경 색이 비슷하면 보호 브러시를 함께 쓰세요.',
+    '배경 유사도 → 내부 보호 → 가장자리 부드러움 → 스필 보정 → 약한 알파 제거/수축 순입니다. 피사체와 배경 색이 비슷하면 보호 브러시를 함께 쓰세요.',
   advancedGroupMatch: '샘플링·색 일치',
   advancedGroupEdge: '가장자리·투명도 전환',
   advancedGroupSpill: '스필 제거(색 번짐)',
@@ -42,6 +42,12 @@ export default {
   tolerance: '색 허용 오차',
   toleranceDesc:
     '어느 샘플 배경색과도 이 거리 안이면 투명 처리합니다. 크면 과하게 잘리고, 작으면 배경이 남을 수 있습니다.',
+  protectInterior: '내부 보호(연결 키잉)',
+  protectInteriorDesc:
+    '화면 가장자리와 연결된 배경만 제거합니다. 내부 동색(흰 옷 등)은 투명해지지 않습니다. 보통 켜 두세요.',
+  enclosedMin: '폐쇄 영역 제거 임계값',
+  enclosedMinDesc:
+    '가장자리와 연결되지 않은 내부 동색 구멍(겨드랑이 틈 등)은 면적이 이 픽셀 수 이상일 때만 제거합니다. 클수록 내부를 보호하고, 0이면 후보를 모두 제거합니다.',
   softness: '페더(px)',
   softnessDesc:
     '경계 근처에서 불투명→투명으로 바뀌는 폭(px). 클수록 부드럽습니다. 「가장자리 페더」를 켠 경우에만 적용됩니다.',

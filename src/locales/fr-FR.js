@@ -34,7 +34,7 @@ export default {
   previewMask: 'Masque',
   advancedTitle: 'Avancé',
   advancedIntro:
-    'Ressemblance au fond → douceur du bord → spill → coupure d’alpha faible / érosion. Si sujet et fond se ressemblent, utilisez aussi le pinceau de protection.',
+    'Ressemblance au fond → protection intérieure → douceur du bord → spill → coupure d’alpha faible / érosion. Si sujet et fond se ressemblent, utilisez aussi le pinceau de protection.',
   advancedGroupMatch: 'Échantillonnage & couleur',
   advancedGroupEdge: 'Bord & transition alpha',
   advancedGroupSpill: 'Spill (liseré de couleur)',
@@ -42,6 +42,12 @@ export default {
   tolerance: 'Tolérance couleur',
   toleranceDesc:
     'Les pixels proches de n’importe quel échantillon (jusqu’à cette distance) deviennent transparents. Trop haut mange le sujet ; trop bas laisse du fond.',
+  protectInterior: 'Protéger l’intérieur (clé connectée)',
+  protectInteriorDesc:
+    'Ne détoure que le fond relié au bord de l’image. Les zones intérieures de même couleur (vêtements blancs, etc.) restent opaques. À garder activé en général.',
+  enclosedMin: 'Seuil de régions fermées',
+  enclosedMinDesc:
+    'Les trous intérieurs de même couleur non reliés au bord (aisselles, découpes) ne sont détourés que si leur surface ≥ ce nombre de pixels. Plus haut = intérieur plus sûr ; 0 détoure tous les candidats.',
   softness: 'Feather (px)',
   softnessDesc:
     'Largeur de la transition opaque → transparent près du seuil. Plus grand = bord plus doux. Actif seulement si l’adoucissement est coché.',
