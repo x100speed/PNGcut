@@ -30,8 +30,10 @@ export default {
   chromaEnable: '크로마키 사용(불투명 배경 제거)',
   pickColorTitle: '배경색 선택',
   pickColorHint:
-    '제거할 배경 색을 클릭. 여러 번 클릭해 여러 색을 추가할 수 있습니다. 비슷한 색은 기존 샘플을 갱신합니다.',
-  pickColorDisabled: '끄면 원본 표시. 켜면 색을 선택할 수 있습니다.',
+    '왼쪽 클릭으로 배경색 선택(여러 번 가능). 휠로 확대/축소, 오른쪽 드래그로 이동. 비슷한 색은 기존 샘플을 갱신합니다.',
+  pickColorDisabled: '끄면 원본 표시. 켜면 색 선택. 확대/이동은 항상 가능합니다.',
+  pickZoomLabel: '확대',
+  resetPickView: '보기 초기화',
   previewTitle: '미리보기',
   previewResult: '키잉 결과',
   previewMask: '매트',

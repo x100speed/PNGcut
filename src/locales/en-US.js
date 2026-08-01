@@ -31,8 +31,10 @@ export default {
   chromaEnable: 'Enable chroma key (remove opaque background)',
   pickColorTitle: 'Pick background color(s)',
   pickColorHint:
-    'Click colors to treat as background. Click multiple times to add several colors (multi-tone backgrounds). Near-duplicate clicks update an existing sample.',
-  pickColorDisabled: 'Original image is shown when chroma key is off; turn it on to pick a color.',
+    'Left-click to sample background (click multiple times for more colors). Scroll to zoom; right-drag to pan. Near-duplicate clicks update an existing sample.',
+  pickColorDisabled: 'Original image when chroma key is off; turn it on to pick. Zoom/pan still work.',
+  pickZoomLabel: 'Zoom',
+  resetPickView: 'Reset view',
   previewTitle: 'Preview',
   previewResult: 'Keyed result',
   previewMask: 'Matte',

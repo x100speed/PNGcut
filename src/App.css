@@ -221,6 +221,76 @@
   overflow: auto;
 }
 
+/* 取色区：缩放百分比 + 复位 */
+.chroma-sample-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.chroma-sample-toolbar__zoom {
+  font-size: 0.85rem;
+  color: #444;
+  font-variant-numeric: tabular-nums;
+}
+
+.chroma-sample-toolbar__reset {
+  padding: 5px 10px;
+  border: 1px solid #999;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: #333;
+}
+
+.chroma-sample-toolbar__reset:hover:not(:disabled) {
+  border-color: #000;
+  background: #f5f5f5;
+}
+
+.chroma-sample-toolbar__reset:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* 取色视口：滚轮缩放 + 右键拖动 */
+.chroma-sample-viewport {
+  position: relative;
+  height: 380px;
+  overflow: hidden;
+  background: #f0f0f0;
+  border: 1px solid #e5e5e5;
+  border-radius: 4px;
+  touch-action: none;
+  user-select: none;
+}
+
+.chroma-sample-viewport.is-pickable {
+  cursor: crosshair;
+}
+
+.chroma-sample-viewport.is-panning,
+.chroma-sample-viewport.is-panning.is-pickable {
+  cursor: grabbing;
+}
+
+.chroma-sample-stage {
+  transform-origin: 0 0;
+  will-change: transform;
+  display: inline-block;
+}
+
+.chroma-canvas--sample {
+  max-width: none;
+  width: auto;
+  height: auto;
+  display: block;
+  pointer-events: none; /* 事件由视口统一处理，避免缩放后坐标错乱 */
+}
+
 /* 棋盘格：便于观察透明抠图结果 */
 .chroma-canvas-wrap--checker {
   background-color: #e8e8e8;

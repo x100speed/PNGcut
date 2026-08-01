@@ -79,7 +79,11 @@ function App() {
 
   const sourceCanvasRef = useRef(null)
   const sampleCanvasRef = useRef(null)
+  /** 取色区视口：滚轮缩放 / 右键拖动的容器 */
+  const sampleViewportRef = useRef(null)
   const previewCanvasRef = useRef(null)
+  /** 右键拖动画布时的上一帧指针位置 */
+  const samplePanDragRef = useRef(null)
   /** 抠图原始结果缓存（参数变化时重算） */
   const keyedImageCacheRef = useRef(null)
   /** 用户在预览上涂抹：要恢复为原图的区域 */
@@ -194,6 +198,13 @@ function App() {
 
   /** 是否正在把文件拖到上传框上方（用于高亮提示） */
   const [dragOver, setDragOver] = useState(false)
+  /**
+   * 取色预览的缩放与平移
+   * zoom=1 时图片适应视口；滚轮放大后可用右键拖动
+   */
+  const [pickView, setPickView] = useState({ zoom: 1, panX: 0, panY: 0 })
+  /** 右键拖动中：用于切换光标样式 */
+  const [samplePanning, setSamplePanning] = useState(false)
 
   /**
    * 加载一张 PNG：供「点选文件」和「拖拽放入」共用
@@ -218,6 +229,8 @@ function App() {
     setColorSamples([])
     setPreviewZoomOpen(false)
     setPreviewZoomUrl('')
+    setPickView({ zoom: 1, panX: 0, panY: 0 })
+    samplePanDragRef.current = null
     sourceCanvasRef.current = null
     restoreMaskCanvasRef.current = null
     keyedImageCacheRef.current = null
@@ -298,6 +311,7 @@ function App() {
   useLayoutEffect(() => {
     const src = sourceCanvasRef.current
     const sampleEl = sampleCanvasRef.current
+    const viewport = sampleViewportRef.current
     if (!src || !sampleEl || !originalImageUrl) return
 
     sampleEl.width = src.width
@@ -334,7 +348,47 @@ function App() {
         ctx.restore()
       })
     }
+
+    // zoom=1 时让整图适配视口（contain），再叠乘 pickView.zoom
+    if (viewport) {
+      const pad = 8
+      const vw = Math.max(1, viewport.clientWidth - pad * 2)
+      const vh = Math.max(1, viewport.clientHeight - pad * 2)
+      const fit = Math.min(vw / src.width, vh / src.height)
+      sampleEl.style.width = `${src.width * fit}px`
+      sampleEl.style.height = `${src.height * fit}px`
+    }
   }, [originalImageUrl, imageRevision, colorSamples])
+
+  // 取色区：滚轮缩放（非 passive，才能 preventDefault 阻止页面滚动）
+  useEffect(() => {
+    const viewport = sampleViewportRef.current
+    if (!viewport || !originalImageUrl) return undefined
+
+    const onWheel = (e) => {
+      e.preventDefault()
+      const rect = viewport.getBoundingClientRect()
+      const mx = e.clientX - rect.left
+      const my = e.clientY - rect.top
+      const factor = e.deltaY < 0 ? 1.12 : 1 / 1.12
+
+      setPickView((prev) => {
+        const nextZoom = Math.min(8, Math.max(1, prev.zoom * factor))
+        if (nextZoom === prev.zoom) return prev
+        // 以鼠标位置为中心缩放，画面不「跳」
+        const contentX = (mx - prev.panX) / prev.zoom
+        const contentY = (my - prev.panY) / prev.zoom
+        return {
+          zoom: nextZoom,
+          panX: mx - contentX * nextZoom,
+          panY: my - contentY * nextZoom,
+        }
+      })
+    }
+
+    viewport.addEventListener('wheel', onWheel, { passive: false })
+    return () => viewport.removeEventListener('wheel', onWheel)
+  }, [originalImageUrl, imageRevision])
 
   useLayoutEffect(() => {
     const src = sourceCanvasRef.current
@@ -427,15 +481,48 @@ function App() {
   }, [previewZoomOpen])
 
   /**
-   * 点击取色：追加一个背景样本色（多色抠图）
-   * 若与已有样本色过于接近（色距很小），则更新该样本的位置，避免重复堆积
+   * 取色区指针按下：
+   * - 左键：取色（需已启用抠图）
+   * - 右键：开始拖动画布
    */
   const handleSamplePointerDown = (event) => {
-    if (!chromaEnabled || !sourceCanvasRef.current || !sampleCanvasRef.current) return
-
     const canvas = sampleCanvasRef.current
     const src = sourceCanvasRef.current
+    if (!canvas || !src) return
+
+    // 右键：拖动平移
+    if (event.button === 2) {
+      event.preventDefault()
+      samplePanDragRef.current = {
+        pointerId: event.pointerId,
+        lastX: event.clientX,
+        lastY: event.clientY,
+      }
+      setSamplePanning(true)
+      try {
+        event.currentTarget.setPointerCapture(event.pointerId)
+      } catch {
+        /* ignore */
+      }
+      return
+    }
+
+    // 左键：取色
+    if (event.button !== 0) return
+    if (!chromaEnabled) return
+
+    // getBoundingClientRect 已包含 CSS transform，坐标映射到原图像素
     const rect = canvas.getBoundingClientRect()
+    if (rect.width <= 0 || rect.height <= 0) return
+    // 点在画布外（视口空白处）不取色
+    if (
+      event.clientX < rect.left ||
+      event.clientX > rect.right ||
+      event.clientY < rect.top ||
+      event.clientY > rect.bottom
+    ) {
+      return
+    }
     const x = Math.round((event.clientX - rect.left) * (src.width / rect.width))
     const y = Math.round((event.clientY - rect.top) * (src.height / rect.height))
 
@@ -461,6 +548,43 @@ function App() {
     } catch (err) {
       console.error(err)
     }
+  }
+
+  /** 右键拖动中：更新平移 */
+  const handleSamplePointerMove = (event) => {
+    const drag = samplePanDragRef.current
+    if (!drag || drag.pointerId !== event.pointerId) return
+    const dx = event.clientX - drag.lastX
+    const dy = event.clientY - drag.lastY
+    drag.lastX = event.clientX
+    drag.lastY = event.clientY
+    setPickView((prev) => ({
+      ...prev,
+      panX: prev.panX + dx,
+      panY: prev.panY + dy,
+    }))
+  }
+
+  const handleSamplePointerUp = (event) => {
+    const drag = samplePanDragRef.current
+    if (!drag || drag.pointerId !== event.pointerId) return
+    samplePanDragRef.current = null
+    setSamplePanning(false)
+    try {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    } catch {
+      /* ignore */
+    }
+  }
+
+  /** 禁止取色区弹出浏览器右键菜单（右键用于拖动） */
+  const handleSampleContextMenu = (event) => {
+    event.preventDefault()
+  }
+
+  /** 复位取色区缩放与位置 */
+  const handleResetPickView = () => {
+    setPickView({ zoom: 1, panX: 0, panY: 0 })
   }
 
   /** 删除某一个背景样本色 */
@@ -715,12 +839,44 @@ function App() {
                   <p className="chroma-panel__hint">
                     {chromaEnabled ? t.pickColorHint : t.pickColorDisabled}
                   </p>
-                  <div className="chroma-canvas-wrap">
-                    <canvas
-                      ref={sampleCanvasRef}
-                      className={`chroma-canvas ${chromaEnabled ? 'chroma-canvas--interactive' : ''}`}
-                      onPointerDown={handleSamplePointerDown}
-                    />
+                  <div className="chroma-sample-toolbar">
+                    <span className="chroma-sample-toolbar__zoom">
+                      {t.pickZoomLabel}: {Math.round(pickView.zoom * 100)}%
+                    </span>
+                    <button
+                      type="button"
+                      className="chroma-sample-toolbar__reset"
+                      onClick={handleResetPickView}
+                      disabled={pickView.zoom === 1 && pickView.panX === 0 && pickView.panY === 0}
+                    >
+                      {t.resetPickView}
+                    </button>
+                  </div>
+                  {/* 视口 + 可缩放舞台：滚轮放大，右键拖动，左键取色 */}
+                  <div
+                    ref={sampleViewportRef}
+                    className={`chroma-sample-viewport ${samplePanning ? 'is-panning' : ''} ${
+                      chromaEnabled ? 'is-pickable' : ''
+                    }`}
+                    onPointerDown={handleSamplePointerDown}
+                    onPointerMove={handleSamplePointerMove}
+                    onPointerUp={handleSamplePointerUp}
+                    onPointerCancel={handleSamplePointerUp}
+                    onContextMenu={handleSampleContextMenu}
+                  >
+                    <div
+                      className="chroma-sample-stage"
+                      style={{
+                        transform: `translate(${pickView.panX}px, ${pickView.panY}px) scale(${pickView.zoom})`,
+                      }}
+                    >
+                      <canvas
+                        ref={sampleCanvasRef}
+                        className={`chroma-canvas chroma-canvas--sample ${
+                          chromaEnabled ? 'chroma-canvas--interactive' : ''
+                        }`}
+                      />
+                    </div>
                   </div>
                   {/* 多样本色列表：色块 + 色值 + 删除 */}
                   {chromaEnabled && colorSamples.length > 0 && (

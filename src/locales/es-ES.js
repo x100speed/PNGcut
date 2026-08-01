@@ -30,8 +30,10 @@ export default {
   chromaEnable: 'Activar croma (quitar fondo opaco)',
   pickColorTitle: 'Elegir color(es) de fondo',
   pickColorHint:
-    'Clic en colores de fondo a eliminar. Varios clics añaden varios colores. Un clic casi igual actualiza una muestra existente.',
-  pickColorDisabled: 'Muestra el original si está desactivado; actívalo para muestrear.',
+    'Clic izquierdo para muestrear (varios colores). Rueda para zoom; clic derecho + arrastrar para mover.',
+  pickColorDisabled: 'Muestra el original si está desactivado. Zoom/pan siguen disponibles.',
+  pickZoomLabel: 'Zoom',
+  resetPickView: 'Restablecer vista',
   previewTitle: 'Vista previa',
   previewResult: 'Resultado',
   previewMask: 'Mate',

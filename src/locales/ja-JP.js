@@ -30,8 +30,10 @@ export default {
   chromaEnable: 'クロマキーを有効にする（不透明な背景を除去）',
   pickColorTitle: '背景色の取得',
   pickColorHint:
-    '背景として除去したい色をクリック。複数回クリックで複数色を追加できます。近い色のクリックは既存サンプルを更新します。',
-  pickColorDisabled: 'オフのときは原画表示。オンにすると色を取得できます。',
+    '左クリックで背景色を取得（複数可）。ホイールで拡大縮小、右ドラッグで移動。近い色は既存サンプルを更新します。',
+  pickColorDisabled: 'オフのときは原画表示。オンで取色。拡大・移動は常に使えます。',
+  pickZoomLabel: '拡大',
+  resetPickView: '表示をリセット',
   previewTitle: 'プレビュー',
   previewResult: 'キーイング結果',
   previewMask: 'マット',

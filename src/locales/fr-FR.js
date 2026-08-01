@@ -30,8 +30,10 @@ export default {
   chromaEnable: 'Activer l’incrustation (supprimer le fond opaque)',
   pickColorTitle: 'Choisir la/les couleur(s) de fond',
   pickColorHint:
-    'Cliquez les couleurs à traiter comme fond. Plusieurs clics ajoutent plusieurs couleurs. Un clic proche met à jour un échantillon existant.',
-  pickColorDisabled: 'Image d’origine si désactivé ; activez pour échantillonner.',
+    'Clic gauche pour échantillonner (plusieurs couleurs possibles). Molette pour zoomer ; clic droit + glisser pour déplacer.',
+  pickColorDisabled: 'Image d’origine si désactivé ; activez pour échantillonner. Zoom/pan restent disponibles.',
+  pickZoomLabel: 'Zoom',
+  resetPickView: 'Réinitialiser la vue',
   previewTitle: 'Aperçu',
   previewResult: 'Résultat',
   previewMask: 'Masque',

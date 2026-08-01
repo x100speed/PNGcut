@@ -31,8 +31,10 @@ export default {
   chromaEnable: '启用背景色抠图（去除不透明背景）',
   pickColorTitle: '点击取色（参考画面）',
   pickColorHint:
-    '在画面上点击要作为「背景」扣除的颜色；可多次点击添加多个颜色（适合背景有多种色块）。色差接近的点击会更新已有样本。',
-  pickColorDisabled: '关闭抠图时显示原图；开启后可在此取色。',
+    '左键点击取背景色（可多次添加）；滚轮放大缩小；右键拖动平移。色差接近的点击会更新已有样本。',
+  pickColorDisabled: '关闭抠图时显示原图；开启后可在此取色（仍可用滚轮放大、右键拖动查看）。',
+  pickZoomLabel: '缩放',
+  resetPickView: '复位视图',
   previewTitle: '抠图预览',
   previewResult: '抠图结果',
   previewMask: '蒙版',
