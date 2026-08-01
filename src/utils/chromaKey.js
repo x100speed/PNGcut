@@ -408,20 +408,12 @@ export function sampleCanvasColor(canvas, x, y, radius) {
 }
 
 /**
- * 对整张图应用色键，返回结果画布与蒙版画布
- * @param {HTMLCanvasElement} source
- * @param {object} options
- *   - samples: 多样本色数组（优先），或 sample: 单样本（兼容）
- *   - tolerance / softness / smoothing / algorithm
- *   - protectInterior: 连通抠除，保护角色内部同色（默认建议开启）
- *   - enclosedMin: 封闭区域扣除阈值（像素面积）；内部大块镂空才抠
- *   - despillEnabled / despill / edgeRadius
- *   - defringeEnabled: 彻底去白边（去污色 + 弱透明 + 边缘收缩）
- *   - erodePx: 边缘收缩像素（0~3）
- *   - alphaCutoff: 弱透明剔除阈值（0~80，alpha 低于此直接变 0）
+ * 生成「基础抠图像素」（不含边缘收缩 / 弱透明剔除）
+ * 拖动边缘收缩滑块时可以复用这份数据，只重跑轻量后处理，预览才能实时跟上。
+ * @returns {{ width:number, height:number, rgba:Uint8ClampedArray, distances:Float32Array }}
  */
-export function applyColorKey(source, options) {
-  const sourceContext = source.getContext('2d')
+export function computeKeyedBase(source, options) {
+  const sourceContext = source.getContext('2d', { willReadFrequently: true })
   if (!sourceContext) {
     throw new Error('无法读取源图像。')
   }
@@ -433,35 +425,17 @@ export function applyColorKey(source, options) {
 
   const width = source.width
   const height = source.height
-  const sourceImageData = sourceContext.getImageData(0, 0, width, height)
-  const sourcePixels = sourceImageData.data
+  const sourcePixels = sourceContext.getImageData(0, 0, width, height).data
   const pixelCount = width * height
 
-  const outputCanvas = createCanvas(width, height)
-  const maskCanvas = createCanvas(width, height)
-  const outputContext = outputCanvas.getContext('2d')
-  const maskContext = maskCanvas.getContext('2d')
-
-  if (!outputContext || !maskContext) {
-    throw new Error('无法创建抠图画布。')
-  }
-
-  const outputImageData = outputContext.createImageData(width, height)
-  const maskImageData = maskContext.createImageData(width, height)
-  const outputPixels = outputImageData.data
-  const maskPixels = maskImageData.data
-
+  const rgba = new Uint8ClampedArray(pixelCount * 4)
   const distances = new Float32Array(pixelCount)
   const rawOpacities = new Float32Array(pixelCount)
-  // 记录每个像素最近的样本色下标，第二遍写像素时直接取用
   const nearestSampleIndex = new Int16Array(pixelCount)
-  const alphas = new Uint8ClampedArray(pixelCount)
+
   const defringeEnabled = Boolean(options.defringeEnabled)
   const protectInterior = options.protectInterior !== false
   const enclosedMin = Math.max(0, Number(options.enclosedMin) || 0)
-  // 注意：不能写 `erodePx || 0`，否则会把合法的 0 以外的值搞乱；用 Number 明确转换
-  const erodePx = Math.max(0, Math.min(32, Math.round(Number(options.erodePx) || 0)))
-  const alphaCutoff = Math.max(0, Math.min(255, Math.round(Number(options.alphaCutoff) || 0)))
 
   // ----- 第一遍：算色距与原始透明度 -----
   for (let i = 0; i < pixelCount; i++) {
@@ -480,7 +454,6 @@ export function applyColorKey(source, options) {
       b: sourcePixels[index + 2],
     }
 
-    // 多色：取与任一背景样本的最小色距
     let bestDist = Infinity
     let bestIdx = 0
     for (let s = 0; s < sampleRgbs.length; s++) {
@@ -501,7 +474,7 @@ export function applyColorKey(source, options) {
     )
   }
 
-  // ----- 连通背景蒙版：只抠「边缘连通」或「够大的封闭空洞」-----
+  // ----- 连通背景蒙版 -----
   let keyedBg = null
   if (protectInterior) {
     const isCandidate = (i) =>
@@ -516,7 +489,7 @@ export function applyColorKey(source, options) {
     )
   }
 
-  // ----- 第二遍：写像素（内部同色不在 keyedBg 上 → 强制不透明）-----
+  // ----- 第二遍：写基础像素（尚未边缘收缩）-----
   for (let i = 0; i < pixelCount; i++) {
     const index = i * 4
     const pixel = {
@@ -526,15 +499,10 @@ export function applyColorKey(source, options) {
     }
 
     if (sourcePixels[index + 3] < 8) {
-      outputPixels[index] = pixel.r
-      outputPixels[index + 1] = pixel.g
-      outputPixels[index + 2] = pixel.b
-      outputPixels[index + 3] = 0
-      alphas[i] = 0
-      maskPixels[index] = 0
-      maskPixels[index + 1] = 0
-      maskPixels[index + 2] = 0
-      maskPixels[index + 3] = 255
+      rgba[index] = pixel.r
+      rgba[index + 1] = pixel.g
+      rgba[index + 2] = pixel.b
+      rgba[index + 3] = 0
       continue
     }
 
@@ -542,7 +510,6 @@ export function applyColorKey(source, options) {
     const nearestSample = sampleRgbs[nearestSampleIndex[i]]
     let opacity = rawOpacities[i]
 
-    // 关键：不在「应抠背景」蒙版上的像素（例如白衣内部），一律保留
     if (keyedBg && keyedBg[i] !== 1) {
       opacity = 1
     }
@@ -556,7 +523,6 @@ export function applyColorKey(source, options) {
 
     let adjustedPixel = pixel
 
-    // 去污色仍归属「彻底去白边」
     if (defringeEnabled) {
       adjustedPixel = decontaminateColor(adjustedPixel, nearestSample, opacity)
     }
@@ -570,27 +536,31 @@ export function applyColorKey(source, options) {
       )
     }
 
-    // 弱透明剔除：与去白边开关解耦，滑块有值就生效
-    if (alphaCutoff > 0 && opacity * 255 < alphaCutoff) {
-      opacity = 0
-    }
-
-    const alpha = Math.round(opacity * 255)
-    outputPixels[index] = adjustedPixel.r
-    outputPixels[index + 1] = adjustedPixel.g
-    outputPixels[index + 2] = adjustedPixel.b
-    outputPixels[index + 3] = alpha
-    alphas[i] = alpha
-
-    maskPixels[index] = alpha
-    maskPixels[index + 1] = alpha
-    maskPixels[index + 2] = alpha
-    maskPixels[index + 3] = 255
+    rgba[index] = adjustedPixel.r
+    rgba[index + 1] = adjustedPixel.g
+    rgba[index + 2] = adjustedPixel.b
+    rgba[index + 3] = Math.round(opacity * 255)
   }
 
-  // ----- 后处理（边缘收缩 / 弱透明 独立于「彻底去白边」开关，保证滑块一定生效）-----
+  return { width, height, rgba, distances }
+}
 
-  // 1) 彻底去白边：清掉贴着透明边、且仍接近样本色的碎边
+/**
+ * 对基础抠图做后处理：碎边清除 → 边缘收缩 → 弱透明剔除
+ * 只改 alpha，很快，适合滑块拖动时实时刷新预览
+ */
+export function finalizeKeyedFromBase(base, options) {
+  const { width, height, distances } = base
+  const pixelCount = width * height
+  // 拷贝一份，避免多次后处理污染缓存的基础像素
+  const outputPixels = new Uint8ClampedArray(base.rgba)
+  const alphas = new Uint8ClampedArray(pixelCount)
+
+  const defringeEnabled = Boolean(options.defringeEnabled)
+  const erodePx = Math.max(0, Math.min(32, Math.round(Number(options.erodePx) || 0)))
+  const alphaCutoff = Math.max(0, Math.min(255, Math.round(Number(options.alphaCutoff) || 0)))
+
+  // 1) 碎边清除
   if (defringeEnabled) {
     killNearSampleEdgeFringe(
       outputPixels,
@@ -605,7 +575,7 @@ export function applyColorKey(source, options) {
     alphas[i] = outputPixels[i * 4 + 3]
   }
 
-  // 2) 边缘收缩：按像素向内咬掉外轮廓（二值蒙版，效果稳定可见）
+  // 2) 边缘收缩（二值蒙版，每级约咬掉 1px）
   if (erodePx > 0) {
     const eroded = erodeBinaryMatte(alphas, width, height, erodePx, Math.max(1, alphaCutoff || 8))
     for (let i = 0; i < pixelCount; i++) {
@@ -614,7 +584,7 @@ export function applyColorKey(source, options) {
     }
   }
 
-  // 3) 弱透明剔除：低于阈值的 alpha 直接清零（可单独使用，不依赖去白边开关）
+  // 3) 弱透明剔除
   if (alphaCutoff > 0) {
     for (let i = 0; i < pixelCount; i++) {
       if (outputPixels[i * 4 + 3] < alphaCutoff) {
@@ -623,7 +593,7 @@ export function applyColorKey(source, options) {
     }
   }
 
-  // 4) 去白边开启时：收缩后再清一次近样本色碎边（抗锯齿白边常在收缩后仍残留）
+  // 4) 收缩后再清一次碎边
   if (defringeEnabled) {
     killNearSampleEdgeFringe(
       outputPixels,
@@ -641,14 +611,25 @@ export function applyColorKey(source, options) {
     }
   }
 
-  // 同步蒙版预览
+  const outputCanvas = createCanvas(width, height)
+  const maskCanvas = createCanvas(width, height)
+  const outputContext = outputCanvas.getContext('2d')
+  const maskContext = maskCanvas.getContext('2d')
+  if (!outputContext || !maskContext) {
+    throw new Error('无法创建抠图画布。')
+  }
+
+  const outputImageData = outputContext.createImageData(width, height)
+  const maskImageData = maskContext.createImageData(width, height)
+  outputImageData.data.set(outputPixels)
+
   for (let i = 0; i < pixelCount; i++) {
     const a = outputPixels[i * 4 + 3]
     const o = i * 4
-    maskPixels[o] = a
-    maskPixels[o + 1] = a
-    maskPixels[o + 2] = a
-    maskPixels[o + 3] = 255
+    maskImageData.data[o] = a
+    maskImageData.data[o + 1] = a
+    maskImageData.data[o + 2] = a
+    maskImageData.data[o + 3] = 255
   }
 
   outputContext.putImageData(outputImageData, 0, 0)
@@ -658,4 +639,36 @@ export function applyColorKey(source, options) {
     image: outputCanvas,
     mask: maskCanvas,
   }
+}
+
+/**
+ * 对整张图应用色键，返回结果画布与蒙版画布
+ * （完整流程 = 基础抠图 + 后处理；预览层会拆开调用以便实时调边缘收缩）
+ */
+export function applyColorKey(source, options) {
+  const base = computeKeyedBase(source, options)
+  return finalizeKeyedFromBase(base, options)
+}
+
+/**
+ * 用于判断「基础抠图」参数是否变化（变化才需要重算昂贵的连通抠像）
+ */
+export function getKeyedBaseFingerprint(options) {
+  if (!options) return ''
+  const samples = normalizeSampleRgbs(options)
+    .map((s) => `${s.r},${s.g},${s.b}`)
+    .join('|')
+  return [
+    samples,
+    options.tolerance,
+    options.softness,
+    options.smoothing ? 1 : 0,
+    options.algorithm || 'enhanced',
+    options.protectInterior !== false ? 1 : 0,
+    options.enclosedMin,
+    options.despillEnabled ? 1 : 0,
+    options.despill,
+    options.edgeRadius,
+    options.defringeEnabled ? 1 : 0,
+  ].join(';')
 }

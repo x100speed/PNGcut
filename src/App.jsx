@@ -1,7 +1,13 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import './App.css'
 import { processCanvas, downloadAllImages } from './utils/imageProcessor'
-import { applyColorKey, sampleCanvasColor } from './utils/chromaKey'
+import {
+  applyColorKey,
+  computeKeyedBase,
+  finalizeKeyedFromBase,
+  getKeyedBaseFingerprint,
+  sampleCanvasColor,
+} from './utils/chromaKey'
 import {
   buildFinalKeyedCanvas,
   compositeKeyedWithRestore,
@@ -86,6 +92,12 @@ function App() {
   const samplePanDragRef = useRef(null)
   /** 抠图原始结果缓存（参数变化时重算） */
   const keyedImageCacheRef = useRef(null)
+  /**
+   * 基础抠图缓存（不含边缘收缩）
+   * 拖动「边缘收缩」时只对这份数据做后处理，预览才能立刻跟上
+   */
+  const keyedBaseRef = useRef(null)
+  const keyedBaseFingerprintRef = useRef('')
   /** 用户在预览上涂抹：要恢复为原图的区域 */
   const restoreMaskCanvasRef = useRef(null)
   const brushLastPointRef = useRef(null)
@@ -234,6 +246,8 @@ function App() {
     sourceCanvasRef.current = null
     restoreMaskCanvasRef.current = null
     keyedImageCacheRef.current = null
+    keyedBaseRef.current = null
+    keyedBaseFingerprintRef.current = ''
     brushLastPointRef.current = null
 
     const img = new Image()
@@ -400,6 +414,8 @@ function App() {
 
     if (!chromaEnabled || !opts) {
       keyedImageCacheRef.current = null
+      keyedBaseRef.current = null
+      keyedBaseFingerprintRef.current = ''
       previewEl.width = src.width
       previewEl.height = src.height
       ctx.drawImage(src, 0, 0)
@@ -407,7 +423,15 @@ function App() {
     }
 
     try {
-      const { image } = applyColorKey(src, opts)
+      // 基础抠图很贵：只有取色/容差/换图等变了才重算
+      // 边缘收缩 / 弱透明 只走轻量后处理，拖动滑块时预览实时变化
+      const fingerprint = `${imageRevision}|${getKeyedBaseFingerprint(opts)}`
+      if (!keyedBaseRef.current || keyedBaseFingerprintRef.current !== fingerprint) {
+        keyedBaseRef.current = computeKeyedBase(src, opts)
+        keyedBaseFingerprintRef.current = fingerprint
+      }
+
+      const { image } = finalizeKeyedFromBase(keyedBaseRef.current, opts)
       keyedImageCacheRef.current = image
 
       ensureRestoreMaskCanvas(src, restoreMaskCanvasRef)
@@ -1000,6 +1024,12 @@ function App() {
                   <p className="chroma-brush-hint">{t.brushHint}</p>
 
                   <div className="chroma-canvas-wrap chroma-canvas-wrap--checker chroma-canvas-wrap--preview">
+                    {/* 实时显示当前后处理参数，方便确认滑块已作用到预览 */}
+                    {chromaEnabled && colorSamples.length > 0 && (
+                      <div className="chroma-preview-livebadge" aria-live="polite">
+                        {t.erodePx} {erodePx}px · {t.alphaCutoff} {alphaCutoff}
+                      </div>
+                    )}
                     <canvas
                       ref={previewCanvasRef}
                       className={`chroma-canvas ${brushToolActive && brushCanPaint ? 'chroma-canvas--brush' : ''}`}
@@ -1236,6 +1266,8 @@ function App() {
                           min={0}
                           max={15}
                           value={erodePx}
+                          // onInput：拖动过程中持续更新，预览跟手
+                          onInput={(e) => setErodePx(Number(e.target.value))}
                           onChange={(e) => setErodePx(Number(e.target.value))}
                         />
                       </div>
@@ -1250,6 +1282,7 @@ function App() {
                           min={0}
                           max={80}
                           value={alphaCutoff}
+                          onInput={(e) => setAlphaCutoff(Number(e.target.value))}
                           onChange={(e) => setAlphaCutoff(Number(e.target.value))}
                         />
                       </div>

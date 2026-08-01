@@ -462,6 +462,23 @@
 
 .chroma-canvas-wrap--preview {
   max-height: 420px;
+  position: relative;
+}
+
+/* 预览角标：显示当前边缘收缩等后处理数值 */
+.chroma-preview-livebadge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+  line-height: 1.3;
 }
 
 .chroma-canvas-wrap--preview .chroma-canvas {

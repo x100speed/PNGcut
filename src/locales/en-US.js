@@ -77,7 +77,7 @@ export default {
     'When on: remove background mix in semi-transparent pixels and clear near-sample fringe. Edge erode and weak-alpha cutoff below always apply on their own.',
   erodePx: 'Edge erode',
   erodePxDesc:
-    'Shrink the opaque silhouette inward by 0–15 px to cut white fringes. For large sources try 2–8; hard to see in a tiny preview—use Enlarge or download. Too high bites the subject.',
+    'Shrink the opaque silhouette inward by 0–15 px. The keyed preview updates live as you drag. For large sources try 2–8 and use Enlarge to inspect edges. Too high bites the subject.',
   alphaCutoff: 'Weak alpha cutoff',
   alphaCutoffDesc:
     'Pixels below this alpha become fully transparent. Always applies independently. Higher = more aggressive; too high hardens edges.',
