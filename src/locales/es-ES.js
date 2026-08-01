@@ -71,15 +71,15 @@ export default {
     'Reduce el color de fondo que se filtra al borde del sujeto (p. ej. verde). Desactivado = sin corrección de matiz.',
   despillStrength: 'Fuerza de spill',
   despillStrengthDesc: 'Intensidad del despill. Demasiado puede dejar bordes grisáceos.',
-  defringe: 'Anti-borde blanco completo',
+  defringe: 'Anti-borde blanco (descontaminar / flecos)',
   defringeDesc:
-    'Descontamina mezcla de fondo, corta alfa débil y erosiona el contorno. Si se come la silueta, pon erosión en 0.',
+    'Quita la mezcla de fondo en semitransparentes y flecos cercanos a la muestra. La erosión y el corte de alfa de abajo siempre se aplican por separado.',
   erodePx: 'Erosión del borde',
   erodePxDesc:
-    'Reduce zonas opacas 0–3 px. 1 px suele quitar el borde blanco AA; demasiado alto come el sujeto.',
+    'Reduce la silueta opaca 0–15 px para quitar el borde blanco. En imágenes grandes prueba 2–8; en la vista pequeña cuesta verlo: usa Ampliar o descarga.',
   alphaCutoff: 'Corte de alfa débil',
   alphaCutoffDesc:
-    'Píxeles bajo este umbral de alfa pasan a transparentes (fantasmas de suavizado). Demasiado alto endurece el borde.',
+    'Píxeles bajo este umbral pasan a transparentes (siempre independiente). Demasiado alto endurece el borde.',
   sampleRadius: 'Radio de muestreo',
   sampleRadiusDesc:
     'Promedia un área alrededor del clic para el color de fondo. Un poco mayor ayuda con ruido; demasiado mezcla el sujeto.',

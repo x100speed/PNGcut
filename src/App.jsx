@@ -110,8 +110,8 @@ function App() {
 
   /** 彻底去白边：去污色 + 弱透明剔除 + 边缘收缩（参考 character-sprite-splitter） */
   const [defringeEnabled, setDefringeEnabled] = useState(true)
-  /** 边缘收缩像素数：不透明区域向内腐蚀，掐掉细白轮廓 */
-  const [erodePx, setErodePx] = useState(1)
+  /** 边缘收缩像素数：不透明区域向内咬边，掐掉细白轮廓（大图建议 2~8） */
+  const [erodePx, setErodePx] = useState(2)
   /** 弱透明剔除阈值：alpha 低于此值直接变全透明，去掉羽化残影 */
   const [alphaCutoff, setAlphaCutoff] = useState(28)
   /**
@@ -1210,7 +1210,7 @@ function App() {
                     </div>
                   </div>
 
-                  {/* 4. 去白边：弱透明剔除 + 边缘收缩 */}
+                  {/* 4. 去白边 / 边缘收缩 / 弱透明（收缩与弱透明独立生效） */}
                   <div className="chroma-advanced__group">
                     <h4 className="chroma-advanced__group-title">{t.advancedGroupDefringe}</h4>
                     <div className="chroma-advanced__group-fields">
@@ -1234,10 +1234,9 @@ function App() {
                           id="adv-erode"
                           type="range"
                           min={0}
-                          max={3}
+                          max={15}
                           value={erodePx}
                           onChange={(e) => setErodePx(Number(e.target.value))}
-                          disabled={!defringeEnabled}
                         />
                       </div>
                       <div className="chroma-param">
@@ -1252,7 +1251,6 @@ function App() {
                           max={80}
                           value={alphaCutoff}
                           onChange={(e) => setAlphaCutoff(Number(e.target.value))}
-                          disabled={!defringeEnabled}
                         />
                       </div>
                     </div>

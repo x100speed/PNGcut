@@ -72,15 +72,15 @@ export default {
     'Reduces background color bleeding into the subject edge (green spill, blue fringes, etc.). Off = no hue correction for spill.',
   despillStrength: 'Spill strength',
   despillStrengthDesc: 'How strong spill removal is. Too high can make edges look gray or flat.',
-  defringe: 'Full defringe',
+  defringe: 'Full defringe (decontaminate / fringe)',
   defringeDesc:
-    'When on: decontaminate background mix in semi-transparent pixels, cut weak fringe alpha, then erode opaque edges. If the silhouette gets bitten, set edge erode to 0.',
+    'When on: remove background mix in semi-transparent pixels and clear near-sample fringe. Edge erode and weak-alpha cutoff below always apply on their own.',
   erodePx: 'Edge erode',
   erodePxDesc:
-    'Morphologically shrink opaque areas by 0–3 px. 1 px often removes AA white outlines; too high may eat the subject silhouette.',
+    'Shrink the opaque silhouette inward by 0–15 px to cut white fringes. For large sources try 2–8; hard to see in a tiny preview—use Enlarge or download. Too high bites the subject.',
   alphaCutoff: 'Weak alpha cutoff',
   alphaCutoffDesc:
-    'Pixels with alpha below this value become fully transparent — clears faint feather ghosts. Higher = more aggressive; too high hardens edges.',
+    'Pixels below this alpha become fully transparent. Always applies independently. Higher = more aggressive; too high hardens edges.',
   sampleRadius: 'Sample radius',
   sampleRadiusDesc:
     'Averages color in a square around your click for the background sample. Slightly larger resists noise; too large may mix in subject color.',

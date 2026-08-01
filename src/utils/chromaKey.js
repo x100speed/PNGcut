@@ -174,6 +174,52 @@ export function erodeAlpha(alphaArr, width, height, radius) {
   return cur
 }
 
+/**
+ * 二值蒙版边缘收缩：把「有内容」的区域整体向内缩 radius 像素
+ * 比纯 alpha 取最小值更直观——每级确定吃掉约 1px 外轮廓（含白边）
+ * @param {Uint8ClampedArray|Uint8Array} alphaArr
+ * @param {number} solidThreshold alpha 大于此值视为实心（默认 8）
+ */
+export function erodeBinaryMatte(alphaArr, width, height, radius, solidThreshold = 8) {
+  if (radius <= 0) return alphaArr
+
+  const total = width * height
+  // 1 = 实心前景，0 = 透明/背景
+  let cur = new Uint8Array(total)
+  for (let i = 0; i < total; i++) {
+    cur[i] = alphaArr[i] > solidThreshold ? 1 : 0
+  }
+
+  for (let pass = 0; pass < radius; pass++) {
+    const next = new Uint8Array(total)
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        let keep = 1
+        // 3x3 邻域内只要有一个透明/越界，当前像素就被「咬掉」
+        for (let dy = -1; dy <= 1 && keep; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            const nx = x + dx
+            const ny = y + dy
+            if (nx < 0 || ny < 0 || nx >= width || ny >= height || !cur[ny * width + nx]) {
+              keep = 0
+              break
+            }
+          }
+        }
+        next[y * width + x] = keep
+      }
+    }
+    cur = next
+  }
+
+  // 被咬掉的位置 alpha 清零；保留处维持原 alpha（再交给后续弱透明剔除）
+  const out = new Uint8ClampedArray(total)
+  for (let i = 0; i < total; i++) {
+    out[i] = cur[i] ? alphaArr[i] : 0
+  }
+  return out
+}
+
 /** 色距落在容差+羽化范围内 → 视为「可能是背景」的候选像素 */
 function isBackgroundCandidate(distance, tolerance, softness, smoothing) {
   const feather = smoothing ? Math.max(0, softness) : 0
@@ -413,8 +459,9 @@ export function applyColorKey(source, options) {
   const defringeEnabled = Boolean(options.defringeEnabled)
   const protectInterior = options.protectInterior !== false
   const enclosedMin = Math.max(0, Number(options.enclosedMin) || 0)
-  const erodePx = Math.max(0, Math.round(options.erodePx || 0))
-  const alphaCutoff = Math.max(0, Number(options.alphaCutoff) || 0)
+  // 注意：不能写 `erodePx || 0`，否则会把合法的 0 以外的值搞乱；用 Number 明确转换
+  const erodePx = Math.max(0, Math.min(32, Math.round(Number(options.erodePx) || 0)))
+  const alphaCutoff = Math.max(0, Math.min(255, Math.round(Number(options.alphaCutoff) || 0)))
 
   // ----- 第一遍：算色距与原始透明度 -----
   for (let i = 0; i < pixelCount; i++) {
@@ -509,6 +556,7 @@ export function applyColorKey(source, options) {
 
     let adjustedPixel = pixel
 
+    // 去污色仍归属「彻底去白边」
     if (defringeEnabled) {
       adjustedPixel = decontaminateColor(adjustedPixel, nearestSample, opacity)
     }
@@ -522,7 +570,8 @@ export function applyColorKey(source, options) {
       )
     }
 
-    if (defringeEnabled && opacity * 255 < alphaCutoff) {
+    // 弱透明剔除：与去白边开关解耦，滑块有值就生效
+    if (alphaCutoff > 0 && opacity * 255 < alphaCutoff) {
       opacity = 0
     }
 
@@ -539,7 +588,9 @@ export function applyColorKey(source, options) {
     maskPixels[index + 3] = 255
   }
 
-  // 彻底去白边后处理：碎边清除 → 边缘收缩 → 再剔一次弱透明
+  // ----- 后处理（边缘收缩 / 弱透明 独立于「彻底去白边」开关，保证滑块一定生效）-----
+
+  // 1) 彻底去白边：清掉贴着透明边、且仍接近样本色的碎边
   if (defringeEnabled) {
     killNearSampleEdgeFringe(
       outputPixels,
@@ -548,18 +599,39 @@ export function applyColorKey(source, options) {
       height,
       options.tolerance + Math.max(8, options.softness || 0),
     )
+  }
 
+  for (let i = 0; i < pixelCount; i++) {
+    alphas[i] = outputPixels[i * 4 + 3]
+  }
+
+  // 2) 边缘收缩：按像素向内咬掉外轮廓（二值蒙版，效果稳定可见）
+  if (erodePx > 0) {
+    const eroded = erodeBinaryMatte(alphas, width, height, erodePx, Math.max(1, alphaCutoff || 8))
     for (let i = 0; i < pixelCount; i++) {
-      alphas[i] = outputPixels[i * 4 + 3]
+      outputPixels[i * 4 + 3] = eroded[i]
+      alphas[i] = eroded[i]
     }
+  }
 
-    if (erodePx > 0) {
-      const eroded = erodeAlpha(alphas, width, height, erodePx)
-      for (let i = 0; i < pixelCount; i++) {
-        outputPixels[i * 4 + 3] = eroded[i]
+  // 3) 弱透明剔除：低于阈值的 alpha 直接清零（可单独使用，不依赖去白边开关）
+  if (alphaCutoff > 0) {
+    for (let i = 0; i < pixelCount; i++) {
+      if (outputPixels[i * 4 + 3] < alphaCutoff) {
+        outputPixels[i * 4 + 3] = 0
       }
     }
+  }
 
+  // 4) 去白边开启时：收缩后再清一次近样本色碎边（抗锯齿白边常在收缩后仍残留）
+  if (defringeEnabled) {
+    killNearSampleEdgeFringe(
+      outputPixels,
+      distances,
+      width,
+      height,
+      options.tolerance + Math.max(8, options.softness || 0),
+    )
     if (alphaCutoff > 0) {
       for (let i = 0; i < pixelCount; i++) {
         if (outputPixels[i * 4 + 3] < alphaCutoff) {
@@ -567,14 +639,16 @@ export function applyColorKey(source, options) {
         }
       }
     }
+  }
 
-    for (let i = 0; i < pixelCount; i++) {
-      const a = outputPixels[i * 4 + 3]
-      const o = i * 4
-      maskPixels[o] = a
-      maskPixels[o + 1] = a
-      maskPixels[o + 2] = a
-    }
+  // 同步蒙版预览
+  for (let i = 0; i < pixelCount; i++) {
+    const a = outputPixels[i * 4 + 3]
+    const o = i * 4
+    maskPixels[o] = a
+    maskPixels[o + 1] = a
+    maskPixels[o + 2] = a
+    maskPixels[o + 3] = 255
   }
 
   outputContext.putImageData(outputImageData, 0, 0)

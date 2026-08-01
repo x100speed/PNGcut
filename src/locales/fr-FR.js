@@ -71,15 +71,15 @@ export default {
     'Réduit la couleur du fond qui déteint sur le sujet (vert d’écran, etc.). Désactivé = pas de correction de teinte.',
   despillStrength: 'Intensité spill',
   despillStrengthDesc: 'Force du déspill. Trop élevé peut griser les bords.',
-  defringe: 'Anti-frange complet',
+  defringe: 'Anti-frange (décontamination / liseré)',
   defringeDesc:
-    'Décontamine le mélange de fond, coupe les alphas faibles, puis érode le contour. Si la silhouette est mangée, mettez l’érosion à 0.',
+    'Retire le mélange de fond dans les pixels semi-transparents et le liseré proche de l’échantillon. L’érosion et le seuil d’alpha ci-dessous s’appliquent toujours indépendamment.',
   erodePx: 'Érosion du bord',
   erodePxDesc:
-    'Réduit les zones opaques de 0 à 3 px. 1 px enlève souvent le liseré blanc AA ; trop haut mange le sujet.',
+    'Réduit la silhouette opaque de 0 à 15 px pour couper le liseré blanc. Pour les grandes images, essayez 2–8 ; peu visible en petit aperçu — utilisez Agrandir ou téléchargez.',
   alphaCutoff: 'Seuil d’alpha faible',
   alphaCutoffDesc:
-    'Les pixels sous ce seuil d’alpha deviennent totalement transparents (fantômes de feather). Trop haut durcit les bords.',
+    'Les pixels sous ce seuil deviennent totalement transparents (toujours indépendant). Trop haut durcit les bords.',
   sampleRadius: 'Rayon d’échantillonnage',
   sampleRadiusDesc:
     'Moyenne autour du clic pour la couleur de fond. Un peu plus large résiste au bruit ; trop large mélange le sujet.',
