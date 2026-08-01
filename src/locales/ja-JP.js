@@ -32,6 +32,11 @@ export default {
   previewTitle: 'プレビュー',
   previewResult: 'キーイング結果',
   previewMask: 'マット',
+  downloadKeyedImage: '画像をダウンロード',
+  downloadKeyedHint: '分割せず、キーイング後の画像全体をダウンロード（保護ブラシ込み）',
+  enlargePreview: '拡大表示',
+  enlargePreviewHint: 'プレビューを拡大。ダブルクリックでも開けます',
+  closePreviewZoom: '閉じる',
   advancedTitle: '詳細設定',
   advancedIntro:
     '背景との一致→内部保護→輪郭の柔らかさ→スピル除去→弱いアルファ除去/収縮の順。被写体と背景が近い色のときは保護ブラシも併用してください。',

@@ -1,4 +1,4 @@
-import React, { useCallback, useLayoutEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import './App.css'
 import { processCanvas, downloadAllImages } from './utils/imageProcessor'
 import { applyColorKey, sampleCanvasColor } from './utils/chromaKey'
@@ -120,6 +120,10 @@ function App() {
   const [enclosedMin, setEnclosedMin] = useState(200)
 
   const [previewMode, setPreviewMode] = useState('result')
+  /** 放大查看抠图预览（弹层） */
+  const [previewZoomOpen, setPreviewZoomOpen] = useState(false)
+  /** 放大层里显示的图片 data URL（打开时从预览画布截取） */
+  const [previewZoomUrl, setPreviewZoomUrl] = useState('')
 
   /** 保护画笔：仅在「抠图结果」预览上涂抹，恢复与背景同色被误抠的区域 */
   const [brushToolActive, setBrushToolActive] = useState(false)
@@ -337,6 +341,46 @@ function App() {
     buildColorKeyOptions,
   ])
 
+  // 放大层打开时，随预览画布刷新同步大图
+  useLayoutEffect(() => {
+    if (!previewZoomOpen) return
+    const previewEl = previewCanvasRef.current
+    if (previewEl && previewEl.width > 0) {
+      setPreviewZoomUrl(previewEl.toDataURL('image/png'))
+    }
+  }, [
+    previewZoomOpen,
+    originalImageUrl,
+    imageRevision,
+    chromaEnabled,
+    colorSamples,
+    previewMode,
+    tolerance,
+    softness,
+    smoothing,
+    despillEnabled,
+    despill,
+    edgeRadius,
+    defringeEnabled,
+    erodePx,
+    alphaCutoff,
+    protectInterior,
+    enclosedMin,
+  ])
+
+  // Esc 关闭放大预览
+  useEffect(() => {
+    if (!previewZoomOpen) return undefined
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        setPreviewZoomOpen(false)
+        setPreviewZoomUrl('')
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [previewZoomOpen])
+
   /**
    * 点击取色：追加一个背景样本色（多色抠图）
    * 若与已有样本色过于接近（色距很小），则更新该样本的位置，避免重复堆积
@@ -490,6 +534,56 @@ function App() {
     link.click()
   }
 
+  /**
+   * 下载整张抠图结果（不切分）
+   * - 已开抠图：导出含保护画笔修补后的透明底 PNG
+   * - 未开抠图：导出当前原图
+   */
+  const handleDownloadKeyedImage = () => {
+    const src = sourceCanvasRef.current
+    if (!src) return
+
+    try {
+      let out = src
+      if (chromaEnabled) {
+        if (!colorSamples.length) {
+          setError(t.errorPickColor)
+          return
+        }
+        const opts = buildColorKeyOptions()
+        if (!opts) {
+          setError(t.errorPickColor)
+          return
+        }
+        const { image: keyed } = applyColorKey(src, opts)
+        ensureRestoreMaskCanvas(src, restoreMaskCanvasRef)
+        out = buildFinalKeyedCanvas(src, keyed, restoreMaskCanvasRef.current)
+      }
+
+      const link = document.createElement('a')
+      link.download = chromaEnabled ? 'keyed_image.png' : 'original_image.png'
+      link.href = out.toDataURL('image/png')
+      link.click()
+      setError('')
+    } catch (err) {
+      setError(t.errorProcessFailed + (err.message || String(err)))
+      console.error(err)
+    }
+  }
+
+  /** 打开放大预览：把当前预览画布截成图放进弹层 */
+  const handleOpenPreviewZoom = () => {
+    const previewEl = previewCanvasRef.current
+    if (!previewEl) return
+    setPreviewZoomUrl(previewEl.toDataURL('image/png'))
+    setPreviewZoomOpen(true)
+  }
+
+  const handleClosePreviewZoom = () => {
+    setPreviewZoomOpen(false)
+    setPreviewZoomUrl('')
+  }
+
   return (
     <div className="app">
       <header className="app-header">
@@ -619,6 +713,24 @@ function App() {
                     >
                       {t.previewMask}
                     </button>
+                    {/* 只抠图、不切分时：直接下载整张结果 */}
+                    <button
+                      type="button"
+                      className="chroma-preview-toolbar__action"
+                      onClick={handleDownloadKeyedImage}
+                      disabled={chromaEnabled && colorSamples.length === 0}
+                      title={t.downloadKeyedHint}
+                    >
+                      {t.downloadKeyedImage}
+                    </button>
+                    <button
+                      type="button"
+                      className="chroma-preview-toolbar__action"
+                      onClick={handleOpenPreviewZoom}
+                      title={t.enlargePreviewHint}
+                    >
+                      {t.enlargePreview}
+                    </button>
                   </div>
 
                   <div className="chroma-brush-bar">
@@ -658,7 +770,7 @@ function App() {
                   </div>
                   <p className="chroma-brush-hint">{t.brushHint}</p>
 
-                  <div className="chroma-canvas-wrap chroma-canvas-wrap--checker">
+                  <div className="chroma-canvas-wrap chroma-canvas-wrap--checker chroma-canvas-wrap--preview">
                     <canvas
                       ref={previewCanvasRef}
                       className={`chroma-canvas ${brushToolActive && brushCanPaint ? 'chroma-canvas--brush' : ''}`}
@@ -666,10 +778,60 @@ function App() {
                       onPointerMove={handlePreviewBrushMove}
                       onPointerUp={handlePreviewBrushUp}
                       onPointerCancel={handlePreviewBrushUp}
+                      onDoubleClick={handleOpenPreviewZoom}
                     />
                   </div>
                 </div>
               </div>
+
+              {/* 放大预览弹层：棋盘格底 + 大图，Esc / 点遮罩关闭 */}
+              {previewZoomOpen && (
+                <div
+                  className="preview-zoom"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label={t.enlargePreview}
+                  onClick={handleClosePreviewZoom}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') handleClosePreviewZoom()
+                  }}
+                >
+                  <div
+                    className="preview-zoom__panel"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div className="preview-zoom__bar">
+                      <span className="preview-zoom__title">{t.enlargePreview}</span>
+                      <div className="preview-zoom__actions">
+                        <button
+                          type="button"
+                          className="preview-zoom__btn"
+                          onClick={handleDownloadKeyedImage}
+                          disabled={chromaEnabled && colorSamples.length === 0}
+                        >
+                          {t.downloadKeyedImage}
+                        </button>
+                        <button
+                          type="button"
+                          className="preview-zoom__btn preview-zoom__btn--close"
+                          onClick={handleClosePreviewZoom}
+                        >
+                          {t.closePreviewZoom}
+                        </button>
+                      </div>
+                    </div>
+                    <div
+                      className={`preview-zoom__stage ${
+                        previewMode === 'result' ? 'preview-zoom__stage--checker' : ''
+                      }`}
+                    >
+                      {previewZoomUrl ? (
+                        <img src={previewZoomUrl} alt={t.previewTitle} className="preview-zoom__img" />
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="chroma-advanced">
                 <h3 className="chroma-advanced__title">{t.advancedTitle}</h3>

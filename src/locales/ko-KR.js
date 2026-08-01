@@ -32,6 +32,11 @@ export default {
   previewTitle: '미리보기',
   previewResult: '키잉 결과',
   previewMask: '매트',
+  downloadKeyedImage: '이미지 다운로드',
+  downloadKeyedHint: '분할 없이 키잉된 전체 PNG 다운로드(보호 브러시 포함)',
+  enlargePreview: '확대 보기',
+  enlargePreviewHint: '키잉 미리보기를 확대합니다. 미리보기 더블클릭도 가능',
+  closePreviewZoom: '닫기',
   advancedTitle: '고급',
   advancedIntro:
     '배경 유사도 → 내부 보호 → 가장자리 부드러움 → 스필 보정 → 약한 알파 제거/수축 순입니다. 피사체와 배경 색이 비슷하면 보호 브러시를 함께 쓰세요.',

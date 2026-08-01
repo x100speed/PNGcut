@@ -32,6 +32,11 @@ export default {
   previewTitle: 'Vista previa',
   previewResult: 'Resultado',
   previewMask: 'Mate',
+  downloadKeyedImage: 'Descargar imagen',
+  downloadKeyedHint: 'Descarga el PNG completo con croma (incluye pincel de protección), sin dividir',
+  enlargePreview: 'Ampliar',
+  enlargePreviewHint: 'Ver la vista previa en grande; o doble clic en la vista previa',
+  closePreviewZoom: 'Cerrar',
   advancedTitle: 'Avanzado',
   advancedIntro:
     'Parecido al fondo → protección interior → suavidad del borde → spill → corte de alfa débil / erosión. Si sujeto y fondo se parecen, usa también el pincel de protección.',

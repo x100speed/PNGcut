@@ -293,8 +293,10 @@
 
 .chroma-preview-toolbar {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 10px;
+  align-items: center;
 }
 
 .chroma-preview-toolbar button {
@@ -309,6 +311,142 @@
 .chroma-preview-toolbar button.is-active {
   background: #000;
   color: #fff;
+}
+
+/* 下载 / 放大：与模式切换按钮区分开 */
+.chroma-preview-toolbar__action {
+  margin-left: 4px;
+  background: #111 !important;
+  color: #fff !important;
+  border-color: #111 !important;
+}
+
+.chroma-preview-toolbar__action:hover:not(:disabled) {
+  background: #333 !important;
+}
+
+.chroma-preview-toolbar__action:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.chroma-canvas-wrap--preview {
+  max-height: 420px;
+}
+
+.chroma-canvas-wrap--preview .chroma-canvas {
+  cursor: zoom-in;
+}
+
+.chroma-canvas-wrap--preview .chroma-canvas.chroma-canvas--brush {
+  cursor: crosshair;
+}
+
+/* 放大预览弹层 */
+.preview-zoom {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.preview-zoom__panel {
+  width: min(1200px, 100%);
+  max-height: calc(100vh - 32px);
+  background: #1a1a1a;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+.preview-zoom__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  background: #111;
+  color: #fff;
+  border-bottom: 1px solid #333;
+}
+
+.preview-zoom__title {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.preview-zoom__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.preview-zoom__btn {
+  padding: 7px 12px;
+  border: 1px solid #555;
+  background: #fff;
+  color: #111;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.88rem;
+}
+
+.preview-zoom__btn:hover:not(:disabled) {
+  background: #f0f0f0;
+}
+
+.preview-zoom__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.preview-zoom__btn--close {
+  background: transparent;
+  color: #fff;
+  border-color: #666;
+}
+
+.preview-zoom__btn--close:hover {
+  background: #333;
+  color: #fff;
+}
+
+.preview-zoom__stage {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: #2a2a2a;
+}
+
+.preview-zoom__stage--checker {
+  background-color: #3a3a3a;
+  background-image:
+    linear-gradient(45deg, #2e2e2e 25%, transparent 25%),
+    linear-gradient(-45deg, #2e2e2e 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #2e2e2e 75%),
+    linear-gradient(-45deg, transparent 75%, #2e2e2e 75%);
+  background-size: 20px 20px;
+  background-position: 0 0, 0 10px, 10px -10px, -10px 0;
+}
+
+.preview-zoom__img {
+  max-width: 100%;
+  max-height: calc(100vh - 140px);
+  width: auto;
+  height: auto;
+  image-rendering: pixelated;
+  display: block;
 }
 
 .chroma-brush-bar {

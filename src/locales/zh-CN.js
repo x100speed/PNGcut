@@ -33,6 +33,11 @@ export default {
   previewTitle: '抠图预览',
   previewResult: '抠图结果',
   previewMask: '蒙版',
+  downloadKeyedImage: '下载图片',
+  downloadKeyedHint: '下载当前整张抠图结果（含保护画笔修补），不进行切分',
+  enlargePreview: '放大预览',
+  enlargePreviewHint: '放大查看抠图效果；也可双击预览图',
+  closePreviewZoom: '关闭',
   advancedTitle: '高级参数',
   advancedIntro:
     '按用途分组：先决定「多像背景算背景」并保护内部同色，再调边缘软硬，然后处理色边，最后用弱透明剔除/边缘收缩清白边。主体与背景颜色接近时，可配合上方保护画笔修补。',

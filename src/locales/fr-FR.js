@@ -32,6 +32,11 @@ export default {
   previewTitle: 'Aperçu',
   previewResult: 'Résultat',
   previewMask: 'Masque',
+  downloadKeyedImage: 'Télécharger l’image',
+  downloadKeyedHint: 'Télécharger le PNG incrusté entier (avec pinceau de protection), sans découpe',
+  enlargePreview: 'Agrandir',
+  enlargePreviewHint: 'Voir l’aperçu en grand ; ou double-cliquer l’aperçu',
+  closePreviewZoom: 'Fermer',
   advancedTitle: 'Avancé',
   advancedIntro:
     'Ressemblance au fond → protection intérieure → douceur du bord → spill → coupure d’alpha faible / érosion. Si sujet et fond se ressemblent, utilisez aussi le pinceau de protection.',

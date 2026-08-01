@@ -33,6 +33,11 @@ export default {
   previewTitle: 'Preview',
   previewResult: 'Keyed result',
   previewMask: 'Matte',
+  downloadKeyedImage: 'Download image',
+  downloadKeyedHint: 'Download the full keyed PNG (with protect brush), without splitting',
+  enlargePreview: 'Enlarge',
+  enlargePreviewHint: 'View keyed preview larger; or double-click the preview',
+  closePreviewZoom: 'Close',
   advancedTitle: 'Advanced',
   advancedIntro:
     'Grouped steps: how “similar to background” is keyed (with interior protection), how soft the edge is, spill cleanup, then weak-alpha cut & edge erode. Use the protect brush if subject and background colors overlap.',
