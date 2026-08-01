@@ -9,6 +9,9 @@ export default {
   
   // 버튼 텍스트
   selectImage: 'PNG 이미지 선택',
+  dropzoneTitle: 'PNG 이미지를 여기에 놓으세요',
+  dropzoneHint: '이 영역 또는 아래 버튼을 클릭해 선택할 수도 있습니다',
+  dropzoneAria: 'PNG 이미지 드롭 또는 선택',
   processing: '처리 중...',
   downloadAll: '모두 다운로드',
   downloadComponent: '컴포넌트 다운로드',

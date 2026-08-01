@@ -9,6 +9,9 @@ export default {
   
   // Texte des boutons
   selectImage: 'Sélectionner une Image PNG',
+  dropzoneTitle: 'Déposez une image PNG ici',
+  dropzoneHint: 'Ou cliquez sur cette zone / le bouton pour choisir un fichier',
+  dropzoneAria: 'Déposer ou sélectionner une image PNG',
   processing: 'Traitement...',
   downloadAll: 'Tout Télécharger',
   downloadComponent: 'Télécharger le Composant',

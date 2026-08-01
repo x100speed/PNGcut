@@ -8,6 +8,9 @@ export default {
   
   // 按钮文本
   selectImage: '选择PNG图片',
+  dropzoneTitle: '拖入 PNG 图片到此处',
+  dropzoneHint: '也可以点击下方按钮，或点击此区域从文件夹选择',
+  dropzoneAria: '拖入或选择 PNG 图片',
   processing: '处理中...',
   downloadAll: '下载全部',
   downloadComponent: '下载此组件',

@@ -192,11 +192,21 @@ function App() {
     }
   }, [buildColorKeyOptions, chromaEnabled, originalImageUrl, previewMode])
 
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0]
+  /** 是否正在把文件拖到上传框上方（用于高亮提示） */
+  const [dragOver, setDragOver] = useState(false)
+
+  /**
+   * 加载一张 PNG：供「点选文件」和「拖拽放入」共用
+   * @param {File} file
+   */
+  const loadPngFile = (file) => {
     if (!file) return
 
-    if (!file.type.includes('png')) {
+    // 有些系统拖入时 type 可能为空，再看扩展名
+    const isPng =
+      (file.type && file.type.toLowerCase().includes('png')) ||
+      /\.png$/i.test(file.name || '')
+    if (!isPng) {
       setError(t.errorInvalidFormat)
       return
     }
@@ -206,6 +216,8 @@ function App() {
     setCutImages([])
     setOriginalImageUrl(null)
     setColorSamples([])
+    setPreviewZoomOpen(false)
+    setPreviewZoomUrl('')
     sourceCanvasRef.current = null
     restoreMaskCanvasRef.current = null
     keyedImageCacheRef.current = null
@@ -248,6 +260,39 @@ function App() {
     }
 
     reader.readAsDataURL(file)
+  }
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files?.[0]
+    if (file) loadPngFile(file)
+    // 同一文件可再次选择
+    e.target.value = ''
+  }
+
+  /** 拖入文件到上传框 */
+  const handleDropZoneDragOver = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (loading) return
+    setDragOver(true)
+  }
+
+  const handleDropZoneDragLeave = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    // 只有真正离开整个 dropzone 时才取消高亮（避免子元素触发 leave）
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setDragOver(false)
+    }
+  }
+
+  const handleDropZoneDrop = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOver(false)
+    if (loading) return
+    const file = e.dataTransfer?.files?.[0]
+    if (file) loadPngFile(file)
   }
 
   useLayoutEffect(() => {
@@ -600,9 +645,37 @@ function App() {
 
       <main className="app-main">
         <div className="upload-section">
-          <label htmlFor="file-upload" className="upload-button">
-            {loading ? t.processing : t.selectImage}
-          </label>
+          {/* 拖入 / 点击选择 PNG */}
+          <div
+            className={`upload-dropzone ${dragOver ? 'is-dragover' : ''} ${loading ? 'is-disabled' : ''}`}
+            onDragEnter={handleDropZoneDragOver}
+            onDragOver={handleDropZoneDragOver}
+            onDragLeave={handleDropZoneDragLeave}
+            onDrop={handleDropZoneDrop}
+            onClick={() => {
+              if (!loading) document.getElementById('file-upload')?.click()
+            }}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                if (!loading) document.getElementById('file-upload')?.click()
+              }
+            }}
+            aria-label={t.dropzoneAria}
+          >
+            <div className="upload-dropzone__icon" aria-hidden="true">
+              PNG
+            </div>
+            <p className="upload-dropzone__title">
+              {loading ? t.processing : t.dropzoneTitle}
+            </p>
+            <p className="upload-dropzone__hint">{t.dropzoneHint}</p>
+            <span className="upload-dropzone__btn">
+              {loading ? t.processing : t.selectImage}
+            </span>
+          </div>
           <input
             id="file-upload"
             type="file"

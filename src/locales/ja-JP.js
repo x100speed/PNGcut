@@ -9,6 +9,9 @@ export default {
   
   // ボタンテキスト
   selectImage: 'PNG画像を選択',
+  dropzoneTitle: 'PNG画像をここにドロップ',
+  dropzoneHint: 'この領域または下のボタンをクリックして選択もできます',
+  dropzoneAria: 'PNG画像をドロップまたは選択',
   processing: '処理中...',
   downloadAll: 'すべてダウンロード',
   downloadComponent: 'コンポーネントをダウンロード',
